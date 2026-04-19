@@ -1,7 +1,7 @@
 # Implementation Plan: pyenum — Rust-Defined Python Enums for PyO3
 
 **Branch**: `001-pyenum-derive` | **Date**: 2026-04-20 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-pyenum-derive/spec.md`
+**Input**: Feature specification from `/.specify/specs/001-pyenum-derive/spec.md`
 
 ## Summary
 
@@ -71,7 +71,7 @@ Tests are MANDATORY for this project. Every user story and every non-trivial beh
 ### Documentation (this feature)
 
 ```text
-specs/001-pyenum-derive/
+.specify/specs/001-pyenum-derive/
 ├── plan.md                              # this file
 ├── research.md                          # Phase 0 decisions (PyO3 0.25–0.28 API matrix, compatibility shim, cache primitive, trybuild layout)
 ├── data-model.md                        # Entities: Rust source enum, Python class, cache, conversion boundary
@@ -145,7 +145,7 @@ pyenum/                                  # repo root = workspace root (existing)
 │   ├── test_interop_sqlalchemy.py       # SC-006 slice — `Column(Enum(MyEnum))` persists and reloads (sqlite in-memory)
 │   └── test_interop_match.py            # Python `match`/`case` dispatches on members
 ├── .github/workflows/test.yml           # CI: cargo fmt check / clippy -D warnings / cargo test / cargo-llvm-cov / trybuild / pytest; matrix = {pyo3 feature: 0_25/0_26/0_27/0_28} × {Python: 3.11/3.12/3.13} × {OS: Ubuntu/macOS}
-└── specs/001-pyenum-derive/             # this feature's spec-kit artifacts (documented above)
+└── .specify/specs/001-pyenum-derive/    # this feature's spec-kit artifacts (documented above)
 ```
 
 **Structure Decision**: Cargo workspace rooted at the repo root. Three crates under `crates/`:

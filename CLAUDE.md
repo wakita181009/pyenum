@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/001-pyenum-derive/plan.md
+.specify/specs/001-pyenum-derive/plan.md
 
 For the project's non-negotiable principles and governance rules, read the
 constitution:
@@ -16,7 +16,7 @@ in declaration order, supporting aliasing, and interoperating with downstream
 tools (pydantic, FastAPI, SQLAlchemy, `match`/`case`, dataclasses) without
 hand-written conversion shims.
 
-**Active feature**: `specs/001-pyenum-derive/spec.md` (branch
+**Active feature**: `.specify/specs/001-pyenum-derive/spec.md` (branch
 `001-pyenum-derive`, status: Draft).
 
 ## Scope of v1
@@ -73,13 +73,13 @@ pyenum/
 ├── python/
 │   └── pyproject.toml                # maturin + pytest config
 ├── tests/                            # Python pytest suite (no Cargo)
-├── specs/001-pyenum-derive/
-│   ├── spec.md                       # feature specification (source of truth)
-│   ├── plan.md                       # implementation plan
-│   ├── research.md                   # Phase 0 decisions
-│   ├── tasks.md                      # Phase 2 task list
-│   └── checklists/requirements.md    # requirements checklist
 └── .specify/                         # Spec Kit workflow assets
+    └── specs/001-pyenum-derive/
+        ├── spec.md                   # feature specification (source of truth)
+        ├── plan.md                   # implementation plan
+        ├── research.md               # Phase 0 decisions
+        ├── tasks.md                  # Phase 2 task list
+        └── checklists/requirements.md # requirements checklist
 ```
 
 ## Toolchain

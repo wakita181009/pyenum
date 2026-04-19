@@ -4,7 +4,7 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 # Tasks: pyenum — Rust-Defined Python Enums for PyO3
 
-**Input**: Design documents from `/specs/001-pyenum-derive/`
+**Input**: Design documents from `/.specify/specs/001-pyenum-derive/`
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
 
 **Tests**: Test tasks are MANDATORY. Every user story MUST include tests written BEFORE the implementation, following the Red-Green-Refactor TDD cycle.
@@ -43,7 +43,7 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 - [x] T004 [P] Create `crates/pyenum-derive/Cargo.toml` with `[lib] proc-macro = true`, `syn = "2"`, `quote = "1"`, `proc-macro2 = "1"`, and dev-deps `trybuild` + `pyenum` (path)
 - [x] T005 [P] Create `crates/pyenum-test/Cargo.toml` with `[lib] crate-type = ["cdylib"]`, `publish = false`, pyo3 feature passthrough to `pyenum`, and the pyo3 `extension-module` feature
 - [x] T006 [P] Write `LICENSE` at the repo root (MIT text with the project's copyright line)
-- [x] T007 [P] Write `README.md` at the repo root summarising the project, linking to `specs/001-pyenum-derive/`, and embedding the minimal quickstart snippet from [quickstart.md](./quickstart.md)
+- [x] T007 [P] Write `README.md` at the repo root summarising the project, linking to `.specify/specs/001-pyenum-derive/`, and embedding the minimal quickstart snippet from [quickstart.md](./quickstart.md)
 - [ ] T008 [P] Write `pyproject.toml` at the repo root declaring the dev/test dependency group only (pytest, pytest-cov, maturin, pydantic, fastapi, sqlalchemy, httpx) with `publishable = false` equivalent (no `[project]` dist metadata, or `[project].name = "pyenum-dev"` marked internal) — only `python/pyproject.toml` exists; a root copy is still pending
 - [x] T009 [P] Scaffold `.github/workflows/test.yml` with a matrix skeleton (`pyo3-feature = [pyo3-0_25, pyo3-0_26, pyo3-0_27, pyo3-0_28]` × `python = [3.11, 3.12, 3.13]` × `os = [ubuntu-latest, macos-latest]`) — jobs for `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test --features $pyo3-feature --no-default-features`, and `pytest` will be filled in later phases — pyo3-feature axis collapsed to single pinned version per Q6
 - [ ] T010 [P] Create empty module files so the skeleton compiles: `crates/pyenum/src/lib.rs`, `crates/pyenum/src/prelude.rs`, `crates/pyenum/src/compat.rs`, `crates/pyenum/src/trait_def.rs`, `crates/pyenum/src/cache.rs`, `crates/pyenum/src/construct.rs`, `crates/pyenum/src/convert.rs`, `crates/pyenum/src/register.rs` (each with a `//! module placeholder` doc-comment) — `prelude.rs`, `compat.rs`, `convert.rs` were never created (obsoleted by pinning to PyO3 0.28 + merging conversion codegen into the derive output); remaining files all exist
@@ -311,8 +311,8 @@ name). See commit `78ca3c3`.
 
 - [ ] T109 [P] [RED] Add a rustdoc example per base type on `crates/pyenum/src/lib.rs` (at minimum one complete `#[pymodule]` example for each of `Enum`, `IntEnum`, `StrEnum`, `Flag`, `IntFlag`) using ` ```rust,ignore ` fences — fails `cargo doc --no-deps` if examples don't typecheck-as-text
 - [ ] T110 [P] [GREEN] Author the rustdoc examples; run `cargo doc --no-deps --all-features` and verify no warnings
-- [ ] T111 [P] Add a worked example per base type to `README.md` at the repo root (cross-link to `specs/001-pyenum-derive/quickstart.md` for the full walkthrough)
-- [ ] T112 [P] Update `crates/pyenum/src/lib.rs` crate-level `//!` block to link to `specs/001-pyenum-derive/spec.md` and summarise the PyO3 version matrix
+- [ ] T111 [P] Add a worked example per base type to `README.md` at the repo root (cross-link to `.specify/specs/001-pyenum-derive/quickstart.md` for the full walkthrough)
+- [ ] T112 [P] Update `crates/pyenum/src/lib.rs` crate-level `//!` block to link to `.specify/specs/001-pyenum-derive/spec.md` and summarise the PyO3 version matrix
 
 ### CI + Coverage finalisation
 
@@ -324,7 +324,7 @@ name). See commit `78ca3c3`.
 ### Final validation
 
 - [ ] T117 Run `quickstart.md` end-to-end locally (fresh `cargo new`, add deps, copy the quickstart code, `maturin develop`, import, exercise); confirm everything described there actually works
-- [ ] T118 Verify total test count: Rust unit tests + integration tests + trybuild fixtures + pytest modules all execute on `cargo test --workspace --features pyo3-0_28` and `pytest tests/`; capture the count in `specs/001-pyenum-derive/quickstart.md` as a sanity checkpoint
+- [ ] T118 Verify total test count: Rust unit tests + integration tests + trybuild fixtures + pytest modules all execute on `cargo test --workspace --features pyo3-0_28` and `pytest tests/`; capture the count in `.specify/specs/001-pyenum-derive/quickstart.md` as a sanity checkpoint
 - [ ] T119 [REFACTOR] Final sweep: `cargo fmt`, `cargo clippy -- -D warnings`, `cargo doc --no-deps`, `pytest tests/` — all green; update CHANGELOG entry under `[Unreleased]` summarising the public surface for v1.0.0
 
 ---

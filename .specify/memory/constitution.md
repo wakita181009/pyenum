@@ -24,7 +24,7 @@ Templates reviewed:
     without structural change.
   - ✅ .specify/templates/checklist-template.md — No structural change required.
 Follow-up TODOs:
-  - specs/001-pyenum-derive/plan.md: re-run its "Constitution Check" section
+  - .specify/specs/001-pyenum-derive/plan.md: re-run its "Constitution Check" section
     against these principles and fill/adjust gate rows (pending owner action).
 -->
 
@@ -219,7 +219,7 @@ contributor preference, the constitution wins.
 
 **Runtime guidance**: day-to-day implementation context (stack, commands,
 version-specific quirks) lives in `CLAUDE.md` and the active feature's
-`specs/<feature>/plan.md`. This constitution intentionally stays
+`.specify/specs/<feature>/plan.md`. This constitution intentionally stays
 behavior-focused and refers out for mechanics.
 
 **Version**: 1.0.0 | **Ratified**: 2026-04-20 | **Last Amended**: 2026-04-20

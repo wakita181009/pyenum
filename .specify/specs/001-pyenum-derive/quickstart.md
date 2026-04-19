@@ -152,10 +152,10 @@ error: variant `Pass` collides with a Python keyword
     |     ^^^^
 ```
 
-Other rejection classes (tuple variants, struct variants, generics, lifetimes, empty enum, base/value mismatch, enum-reserved member names, dunder collisions) all produce analogous diagnostics. See `specs/001-pyenum-derive/contracts/derive-contract.md` for the full list.
+Other rejection classes (tuple variants, struct variants, generics, lifetimes, empty enum, base/value mismatch, enum-reserved member names, dunder collisions) all produce analogous diagnostics. See `.specify/specs/001-pyenum-derive/contracts/derive-contract.md` for the full list.
 
 ## Next steps
 
-- See `specs/001-pyenum-derive/spec.md` for the full acceptance surface.
-- See `specs/001-pyenum-derive/contracts/` for per-surface guarantees.
+- See `.specify/specs/001-pyenum-derive/spec.md` for the full acceptance surface.
+- See `.specify/specs/001-pyenum-derive/contracts/` for per-surface guarantees.
 - For interop with pydantic, FastAPI, SQLAlchemy, see the tests under `tests/python/test_interop_*.py` once `/speckit-tasks` and implementation land.
