@@ -217,22 +217,22 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 ### Tests for User Story 5 (MANDATORY - RED phase) ⚠️
 
-- [ ] T079 [P] [US5] [RED] Add trybuild fail fixtures for variant shape: `crates/pyenum-derive/tests/ui/fail/tuple_variant.rs`, `struct_variant.rs` — currently succeed silently (derive accepts anything), must fail
-- [ ] T080 [P] [US5] [RED] Add trybuild fail fixtures for generics/lifetime: `generic_enum.rs`, `lifetime_enum.rs` — must fail
-- [ ] T081 [P] [US5] [RED] Add trybuild fail fixture for empty enum: `empty_enum.rs` — must fail
-- [ ] T082 [P] [US5] [RED] Add trybuild fail fixtures for reserved names: `reserved_keyword.rs` (variant `Class`), `reserved_enum_dunder.rs` (variant `__init__`), `reserved_enum_member.rs` (variant `_value_`) — must fail
-- [ ] T083 [P] [US5] [RED] Add trybuild fail fixture for base/value mismatch: `int_enum_with_string_value.rs`, `strenum_with_int.rs` — must fail
-- [ ] T084 [P] [US5] [RED] Add trybuild fail fixtures for attribute surface: `duplicate_base_attr.rs` (two `#[pyenum(base = …)]`), `unknown_pyenum_attr.rs` (`#[pyenum(bogus = 1)]`) — must fail
+- [x] T079 [P] [US5] [RED] Add trybuild fail fixtures for variant shape: `crates/pyenum-derive/tests/ui/fail/tuple_variant.rs`, `struct_variant.rs` — landed in commit `78ca3c3`
+- [x] T080 [P] [US5] [RED] Add trybuild fail fixtures for generics/lifetime: `generic_enum.rs`, `lifetime_enum.rs` — landed in commit `78ca3c3`
+- [x] T081 [P] [US5] [RED] Add trybuild fail fixture for empty enum: `empty_enum.rs` — landed in commit `78ca3c3`
+- [ ] T082 [P] [US5] [RED] Add trybuild fail fixtures for reserved names: `reserved_keyword.rs` (variant `Class`), `reserved_enum_dunder.rs` (variant `__init__`), `reserved_enum_member.rs` (variant `_value_`) — **partial**: `reserved_name_value.rs` covers the `_value_`-equivalent (lowercase `value`); the dunder and Python-keyword cases remain to be added
+- [x] T083 [P] [US5] [RED] Add trybuild fail fixture for base/value mismatch: `int_enum_with_string_value.rs`, `strenum_with_int.rs` — landed as `intenum_str_value.rs` + `strenum_int_discriminant.rs` in commit `78ca3c3`
+- [ ] T084 [P] [US5] [RED] Add trybuild fail fixtures for attribute surface: `duplicate_base_attr.rs` (two `#[pyenum(base = …)]`), `unknown_pyenum_attr.rs` (`#[pyenum(bogus = 1)]`) — the rejection logic is live in `parse.rs`, trybuild snapshots still pending
 
 ### Implementation for User Story 5 (GREEN phase)
 
-- [ ] T085 [US5] [GREEN] Enforce unit-variant rejection with `syn::Error::new_spanned(variant, "...")` in `crates/pyenum-derive/src/validate.rs`; message format: `variant \`Foo\` has fields; Python enum members must be unit variants` — passes T079
-- [ ] T086 [US5] [GREEN] Enforce rejection of generics/lifetimes in `validate.rs` — passes T080
-- [ ] T087 [US5] [GREEN] Enforce non-empty-enum rejection in `validate.rs` — passes T081
-- [ ] T088 [US5] [GREEN] Enforce reserved-name rejection in `validate.rs` using `reserved::is_reserved`; message includes the category (`Python keyword` / `enum-reserved member name` / `enum special method name`) — passes T082
-- [ ] T089 [US5] [GREEN] Enforce base/value literal compatibility in `validate.rs`; error names the variant, the declared literal kind, and the base's required kind — passes T083
-- [ ] T090 [US5] [GREEN] Enforce duplicate and unknown `#[pyenum(...)]` attribute rejection in `crates/pyenum-derive/src/parse.rs` — passes T084
-- [ ] T091 [US5] [GREEN] Run `TRYBUILD=overwrite cargo test --test ui` once; inspect every generated `.stderr` snapshot in `crates/pyenum-derive/tests/ui/fail/*.stderr`, commit them; subsequent `cargo test --test ui` (without `TRYBUILD=overwrite`) must pass against the committed snapshots
+- [x] T085 [US5] [GREEN] Enforce unit-variant rejection with `syn::Error::new_spanned(variant, "...")` in `crates/pyenum-derive/src/validate.rs` — shipped with the core derive (commit `3c16e0a`)
+- [x] T086 [US5] [GREEN] Enforce rejection of generics/lifetimes in `validate.rs` — commit `3c16e0a`
+- [x] T087 [US5] [GREEN] Enforce non-empty-enum rejection in `validate.rs` — commit `3c16e0a`
+- [x] T088 [US5] [GREEN] Enforce reserved-name rejection in `validate.rs` using `reserved::is_reserved` — commit `3c16e0a`
+- [x] T089 [US5] [GREEN] Enforce base/value literal compatibility in `validate.rs` — commit `78ca3c3` (HIGH #3 review fix)
+- [x] T090 [US5] [GREEN] Enforce duplicate and unknown `#[pyenum(...)]` attribute rejection in `crates/pyenum-derive/src/parse.rs` — commit `3c16e0a`
+- [x] T091 [US5] [GREEN] Commit trybuild `.stderr` snapshots — 12 fail + 4 accept snapshots committed in `78ca3c3`
 
 ### Refactor for User Story 5 (REFACTOR phase)
 
@@ -240,6 +240,42 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 - [ ] T093 [US5] [REFACTOR] Confirm every `compile_error!` carries a span pointing at the offending variant or attribute literal (not at the enum as a whole) by reading the committed `.stderr` snapshots
 
 **Checkpoint**: Compile-time rejection is the sole source of truth for every invalid input class.
+
+---
+
+## Phase 7.5: Post-Review Amendments (2026-04-20)
+
+**Purpose**: Close the two HIGH-severity correctness gaps surfaced by the
+`/rust-review` of `crates/` on 2026-04-20 — alias-creating variants (spec
+SC "round-trip preserves variant identity" vs. Python's implicit aliasing
+of equal-valued members) and the absence of an explicit-value escape
+hatch for `StrEnum` (where Python's `auto()` lowercases the variant
+name). See commit `78ca3c3`.
+
+### HIGH #2 — Reject alias-creating Rust-side variants
+
+- [x] T120 [RED] Add trybuild fail fixture `crates/pyenum-derive/tests/ui/fail/duplicate_str_value.rs` — two variants with the same `#[pyenum(value = "...")]` string
+- [x] T121 [RED] Add trybuild fail fixture `crates/pyenum-derive/tests/ui/fail/duplicate_auto_lowercase.rs` — two `StrEnum` variants whose names lowercase to the same string (`Hello`/`HELLO`)
+- [x] T122 [GREEN] Implement `check_duplicate_values` in `crates/pyenum-derive/src/validate.rs`: reject duplicate explicit string values and duplicate `StrEnum` auto-lowercased names; Rust itself already blocks duplicate integer discriminants so the int path is belt-and-braces only
+- [x] T123 [GREEN] Commit trybuild `.stderr` snapshots for both fixtures
+
+### HIGH #3 — Explicit `StrEnum` values without clobbering Python's auto semantics
+
+- [x] T124 [RED] Add trybuild accept fixture `crates/pyenum-derive/tests/ui/accept/strenum_explicit_value.rs` — `#[pyenum(value = "Rust")]` preserves case
+- [x] T125 [RED] Add trybuild accept fixture `crates/pyenum-derive/tests/ui/accept/strenum_auto_lowercase.rs` — documents the lowercasing behaviour as intentional
+- [x] T126 [RED] Add trybuild fail fixture `crates/pyenum-derive/tests/ui/fail/value_and_discriminant.rs` — variant carries both `#[pyenum(value = "...")]` and a Rust discriminant (mutually exclusive)
+- [x] T127 [GREEN] Parse variant-level `#[pyenum(value = "...")]` in `crates/pyenum-derive/src/parse.rs`; reject co-occurrence with a Rust discriminant
+- [x] T128 [GREEN] Drop the `#[allow(dead_code)]` / "reserved for future use" notes on `VariantLiteral::Str` in `crates/pyenum/src/trait_def.rs` now that the derive emits it
+- [x] T129 [GREEN] Add `Language` `StrEnum` fixture (explicit values) + `language_roundtrip` pyfunction in `crates/pyenum-test/src/lib.rs`
+- [x] T130 [GREEN] Add `tests/test_protocol_language.py` + matching entries in `tests/pyenum_test.pyi` asserting explicit values are preserved verbatim
+- [x] T131 [GREEN] Document the `StrEnum` auto-lowercasing rule + the explicit-value escape hatch in `README.md` (`### StrEnum values` subsection + updated rejection list)
+
+### Review-loop follow-ups (deferred)
+
+- [ ] T132 Complete the remaining T082 reserved-name trybuild fixtures (Python keyword case, dunder case) to match the original US5 coverage matrix
+- [ ] T133 Complete T084 attribute-surface trybuild fixtures (`duplicate_base_attr.rs`, `unknown_pyenum_attr.rs`) against the existing `parse.rs` rejection logic
+- [ ] T134 `cache.rs:30` — annotate `class.bind(py).clone()` with a comment clarifying that `Borrowed → Bound` requires `.clone()` under PyO3 0.28; revisit if a cheaper conversion lands upstream
+- [ ] T135 `register.rs` — seal `PyModuleExt` via a private trait (the `Sealed` pattern) so external crates cannot implement it
 
 ---
 
