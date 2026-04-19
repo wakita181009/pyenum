@@ -14,32 +14,6 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
-  fmt:
-    name: cargo fmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - run: cargo fmt --all -- --check
-
-  clippy:
-    name: cargo clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: clippy
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-
   docs:
     name: cargo doc
     runs-on: ubuntu-latest
@@ -53,18 +27,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --no-deps
-
-  python-lint:
-    name: python lint (ruff)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-      - run: uv python install 3.13
-      - run: uvx ruff check tests
-      - run: uvx ruff format --check tests
 
   pre-commit:
     name: pre-commit

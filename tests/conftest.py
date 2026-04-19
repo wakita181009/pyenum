@@ -1,8 +1,8 @@
 """Session-startup hook that builds the ``pyenum_test`` cdylib via maturin.
 
 The cdylib lives in ``crates/pyenum-test/``. Pytest is launched from the
-``python/`` directory (see ``python/pyproject.toml``'s ``testpaths``), so
-the ``maturin develop`` invocation here references paths relative to that
+repository root (see ``pyproject.toml``'s ``testpaths``), so the
+``maturin develop`` invocation here references paths relative to that
 working directory.
 
 The build happens inside ``pytest_configure``, which runs **before test
@@ -65,7 +65,7 @@ def pytest_configure(config: pytest.Config) -> None:  # noqa: ARG001
     result = subprocess.run(
         cmd,
         check=False,
-        cwd=_workspace_root() / "python",
+        cwd=_workspace_root(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
