@@ -1,5 +1,10 @@
 # pyenum
 
+[![Crates.io](https://img.shields.io/crates/v/pyenum.svg)](https://crates.io/crates/pyenum)
+[![CI](https://github.com/wakita181009/pyenum/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/wakita181009/pyenum/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/wakita181009/pyenum/branch/main/graph/badge.svg)](https://codecov.io/gh/wakita181009/pyenum)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Expose Rust enums to Python as real `enum.Enum` subclasses — via PyO3.**
 
 `pyenum` provides a `#[derive(PyEnum)]` macro that turns a Rust `enum` into a
