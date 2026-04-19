@@ -4,13 +4,9 @@
 
 `pyenum` provides a `#[derive(PyEnum)]` macro that turns a Rust `enum` into a
 genuine Python enum class. The resulting type passes `isinstance(x, enum.Enum)`,
-iterates in declaration order, supports aliasing, and interoperates with the
-tools that actually check enum membership — pydantic, FastAPI, SQLAlchemy,
-`match`/`case`, dataclasses — with zero hand-written conversion code.
-
-> Status: **draft / pre-release.** Spec `001-pyenum-derive` is frozen; the
-> implementation crate is under active development. API surface may still
-> shift before the first tagged release.
+iterates in declaration order, and interoperates with the tools that actually
+check enum membership — pydantic, FastAPI, SQLAlchemy, `match`/`case`,
+dataclasses — with zero hand-written conversion code.
 
 ---
 
@@ -24,9 +20,11 @@ the result. The common workaround is hand-written `FromPyObject` /
 
 `pyenum` eliminates that boilerplate:
 
-- The derive generates the PyO3 conversion traits automatically.
+- The derive generates the PyO3 conversion traits automatically
+  (`IntoPyObject<'py>` for `T` and `&T`, plus `FromPyObject<'a, 'py>`).
 - The Python class is constructed once per interpreter via a cached
-  `GILOnceCell`, so the boundary cost is negligible after the first call.
+  `pyo3::sync::PyOnceLock`, so the boundary cost is negligible after the
+  first call.
 - Ill-formed Rust input (field-carrying variants, generics, base/value
   mismatches) is rejected at compile time with a variant-level diagnostic.
 
@@ -34,8 +32,9 @@ the result. The common workaround is hand-written `FromPyObject` /
 
 ## Features
 
-- Full `enum.Enum` protocol: iteration order, name/value lookup, aliasing,
-  hashing, equality.
+- Full `enum.Enum` protocol: iteration order, name/value lookup, hashing,
+  equality, and base-specific operations (bitwise ops on `Flag` / `IntFlag`,
+  `int` / `str` mixins for `IntEnum` / `StrEnum`).
 - Supports all five standard Python enum bases — `Enum` (default), `IntEnum`,
   `StrEnum`, `Flag`, `IntFlag` — selectable via a derive attribute argument.
 - Automatic bidirectional conversion for `#[pyfunction]`, `#[pymethods]`, and
@@ -53,17 +52,20 @@ Add the crate to your PyO3 extension:
 ```toml
 # Cargo.toml
 [dependencies]
-pyo3 = { version = "0.28", features = ["extension-module"] }
-pyenum = { version = "0.1", features = ["pyo3-0_28"] }
+pyo3   = { version = "0.28", features = ["extension-module", "abi3-py311"] }
+pyenum = "0.0.1"
 ```
+
+`pyenum` pins PyO3 to **0.28** — see [Compatibility](#compatibility) for the
+rationale.
 
 Declare a Rust enum and derive `PyEnum`:
 
 ```rust
-use pyenum::PyEnum;
+use pyenum::{PyEnum, PyModuleExt};
 use pyo3::prelude::*;
 
-#[derive(Clone, Copy, PyEnum)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
 pub enum Color {
     Red,
     Green,
@@ -81,7 +83,9 @@ fn invert(c: Color) -> Color {
 
 #[pymodule]
 fn my_ext(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<Color>()?;
+    // `add_enum::<T>()` comes from `PyModuleExt`. It registers `T` as a real
+    // Python `enum.Enum` subclass under `T`'s Rust identifier.
+    m.add_enum::<Color>()?;
     m.add_function(wrap_pyfunction!(invert, m)?)?;
     Ok(())
 }
@@ -159,22 +163,25 @@ label that differs from the variant identifier.
 
 ## Compatibility
 
-| Surface       | Supported                                    |
-| ------------- | -------------------------------------------- |
-| **PyO3**      | 0.25, 0.26, 0.27, 0.28 (cargo feature gated) |
-| **Python**    | 3.10, 3.11, 3.12, 3.13, 3.14                 |
-| **Rust**      | stable (edition 2024)                        |
+| Surface       | Supported                                                       |
+| ------------- | --------------------------------------------------------------- |
+| **PyO3**      | 0.28 only                                                       |
+| **Python**    | 3.11, 3.12, 3.13 (CPython; `abi3-py311` limited API)            |
+| **Rust**      | stable, edition 2024, MSRV 1.94                                 |
 | **Platforms** | Linux (x86_64 / aarch64), macOS (x86_64 / arm64), Windows (x64) |
 
-Select one PyO3 feature per build:
+### Why PyO3 0.28 only
 
-```toml
-pyenum = { version = "0.1", default-features = false, features = ["pyo3-0_28"] }
-```
+Cargo's `pyo3-ffi` `links = "python"` rule forbids two `pyo3` versions
+coexisting in the same dependency graph, so a `pyo3-0_2X` feature matrix
+cannot actually be built. `pyenum` therefore tracks a single PyO3 minor
+line and will bump in lockstep with upstream.
 
-> Note: `enum.StrEnum` was added in Python 3.11. On 3.10 it is emulated by
-> mixing `str` into `enum.Enum` — semantics are preserved but the runtime
-> base is slightly different. See the feature spec for details.
+### Why Python 3.11+
+
+`enum.StrEnum` landed in Python 3.11. Polyfilling it on 3.10 means mixing
+`str` into `enum.Enum`, which changes the runtime base class and breaks
+the "pass `isinstance(x, StrEnum)`" guarantee. We chose the strict floor.
 
 ---
 
@@ -200,76 +207,29 @@ Every case is covered by a `trybuild` snapshot test.
 
 ---
 
-## Repository layout
-
-```
-pyenum/
-├── crates/
-│   ├── pyenum/           # runtime crate (cache, conversion helpers, re-exports)
-│   └── pyenum-derive/    # proc-macro crate (#[derive(PyEnum)])
-├── python/               # maturin-built test extension + pytest suite
-├── specs/001-pyenum-derive/
-│   ├── spec.md           # feature specification (source of truth)
-│   ├── plan.md           # implementation plan
-│   └── checklists/       # requirements checklist
-├── .github/workflows/    # lint, test, publish
-└── CLAUDE.md             # contributor / agent operating notes
-```
-
----
-
 ## Development
 
-Prerequisites: Rust stable (edition 2024), Python 3.10+, [`uv`](https://github.com/astral-sh/uv),
-[`maturin`](https://github.com/PyO3/maturin).
+Prerequisites: Rust stable (edition 2024, MSRV 1.94), Python 3.11+,
+[`uv`](https://github.com/astral-sh/uv), [`maturin`](https://github.com/PyO3/maturin).
 
 ```bash
 # Rust checks
 cargo fmt --all
-cargo clippy --workspace --all-targets --features pyo3-0_28 -- -D warnings
-cargo test  --workspace --features pyo3-0_28
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test  --workspace
 cargo test  -p pyenum-derive --test trybuild
 
-# Python integration (builds the extension into a venv)
+# Python integration — conftest.py rebuilds the pyenum-test cdylib
+# on every pytest run via `maturin develop`, so no manual build step.
 cd python
-uv venv --python 3.13
-uv pip install maturin pytest pydantic fastapi sqlalchemy
-uv run maturin develop --release --features pyo3-0_28
+uv venv --python 3.11
+uv pip install -e ".[test]" maturin
 uv run pytest -q
 ```
 
-CI runs the full matrix on every PR: `cargo test` across every supported
-OS × Python × PyO3 combination, the `trybuild` suite, the Python integration
-tests, and a coverage report via `cargo-llvm-cov`.
-
----
-
-## Spec Kit workflow
-
-This repo uses [Spec Kit](https://github.com/anymindgroup/spec-kit). The active
-feature lives under `specs/001-pyenum-derive/`; treat `spec.md` as the source
-of truth. When requirements change, update the spec **before** touching
-implementation.
-
-Standard flow:
-
-```text
-/speckit-specify  →  /speckit-clarify  →  /speckit-plan
-                →  /speckit-tasks     →  /speckit-analyze
-                →  /speckit-implement
-```
-
----
-
-## Performance budget
-
-Targets from `spec.md` §SC-004, validated by the benchmark suite:
-
-- First construction of a Python enum class:
-  - &lt; 2 ms for enums up to 32 variants
-  - &lt; 20 ms for enums up to 1,024 variants
-- Steady-state conversion (cache hit): &lt; 1 µs per call
-- Scaling: linear in variant count, no worse.
+CI runs, on every PR: `cargo fmt`/`clippy`/`test`, the `trybuild` suite,
+and the Python integration tests against the supported Python versions
+on Linux / macOS / Windows.
 
 ---
 

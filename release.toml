@@ -29,6 +29,3 @@ pre-release-commit-message = "chore(release): {{version}}"
 publish = false
 push = true
 push-options = ["--follow-tags"]
-
-# `pyenum-test` already has `publish = false` in its Cargo.toml, so
-# cargo-release skips it automatically — no per-crate override needed.
