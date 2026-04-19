@@ -37,20 +37,20 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 **Purpose**: Convert the repository to a Cargo workspace with the three-crate layout, add licensing/README/pyproject/CI scaffolding, and land an empty-but-compilable skeleton for every file the rest of the plan depends on.
 
-- [ ] T001 Delete legacy `src/main.rs` and the top-level `src/` directory; update `.gitignore` if needed
-- [ ] T002 Rewrite the root `Cargo.toml` as a `[workspace]` manifest with `members = ["crates/pyenum", "crates/pyenum-derive", "crates/pyenum-test"]` and a shared `[workspace.package]` block (license = "MIT", edition = "2024", rust-version = "1.75")
-- [ ] T003 [P] Create `crates/pyenum/Cargo.toml` declaring `[features] default = ["pyo3-0_28"]; pyo3-0_25/0_26/0_27/0_28` with `pyo3` marked `optional = true` and gated per feature; depend on `pyenum-derive` via path
-- [ ] T004 [P] Create `crates/pyenum-derive/Cargo.toml` with `[lib] proc-macro = true`, `syn = "2"`, `quote = "1"`, `proc-macro2 = "1"`, and dev-deps `trybuild` + `pyenum` (path)
-- [ ] T005 [P] Create `crates/pyenum-test/Cargo.toml` with `[lib] crate-type = ["cdylib"]`, `publish = false`, pyo3 feature passthrough to `pyenum`, and the pyo3 `extension-module` feature
-- [ ] T006 [P] Write `LICENSE` at the repo root (MIT text with the project's copyright line)
-- [ ] T007 [P] Write `README.md` at the repo root summarising the project, linking to `specs/001-pyenum-derive/`, and embedding the minimal quickstart snippet from [quickstart.md](./quickstart.md)
-- [ ] T008 [P] Write `pyproject.toml` at the repo root declaring the dev/test dependency group only (pytest, pytest-cov, maturin, pydantic, fastapi, sqlalchemy, httpx) with `publishable = false` equivalent (no `[project]` dist metadata, or `[project].name = "pyenum-dev"` marked internal)
-- [ ] T009 [P] Scaffold `.github/workflows/test.yml` with a matrix skeleton (`pyo3-feature = [pyo3-0_25, pyo3-0_26, pyo3-0_27, pyo3-0_28]` × `python = [3.11, 3.12, 3.13]` × `os = [ubuntu-latest, macos-latest]`) — jobs for `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test --features $pyo3-feature --no-default-features`, and `pytest` will be filled in later phases
-- [ ] T010 [P] Create empty module files so the skeleton compiles: `crates/pyenum/src/lib.rs`, `crates/pyenum/src/prelude.rs`, `crates/pyenum/src/compat.rs`, `crates/pyenum/src/trait_def.rs`, `crates/pyenum/src/cache.rs`, `crates/pyenum/src/construct.rs`, `crates/pyenum/src/convert.rs`, `crates/pyenum/src/register.rs` (each with a `//! module placeholder` doc-comment)
-- [ ] T011 [P] Create empty proc-macro module files: `crates/pyenum-derive/src/lib.rs`, `crates/pyenum-derive/src/parse.rs`, `crates/pyenum-derive/src/validate.rs`, `crates/pyenum-derive/src/codegen.rs`, `crates/pyenum-derive/src/reserved.rs`
-- [ ] T012 [P] Create empty cdylib entry point `crates/pyenum-test/src/lib.rs` with `#[pymodule] fn pyenum_test<'py>(m: &pyo3::Bound<'py, pyo3::types::PyModule>) -> pyo3::PyResult<()> { Ok(()) }`
-- [ ] T013 [P] Create `crates/pyenum-derive/tests/ui.rs` as the trybuild runner entry point; add empty `crates/pyenum-derive/tests/ui/accept/` and `crates/pyenum-derive/tests/ui/fail/` directories with `.gitkeep`
-- [ ] T014 [P] Create `tests/conftest.py` with a session-scoped `pyenum_test` fixture that runs `maturin develop --manifest-path crates/pyenum-test/Cargo.toml --quiet` once before the suite and then `import pyenum_test`
+- [x] T001 Delete legacy `src/main.rs` and the top-level `src/` directory; update `.gitignore` if needed
+- [x] T002 Rewrite the root `Cargo.toml` as a `[workspace]` manifest with `members = ["crates/pyenum", "crates/pyenum-derive", "crates/pyenum-test"]` and a shared `[workspace.package]` block (license = "MIT", edition = "2024", rust-version = "1.75")
+- [x] T003 [P] Create `crates/pyenum/Cargo.toml` declaring `[features] default = ["pyo3-0_28"]; pyo3-0_25/0_26/0_27/0_28` with `pyo3` marked `optional = true` and gated per feature; depend on `pyenum-derive` via path — shipped pinned to `pyo3 = "0.28"` only; multi-version feature matrix obsoleted by Q6 (see Phase 8 note on T094–T100)
+- [x] T004 [P] Create `crates/pyenum-derive/Cargo.toml` with `[lib] proc-macro = true`, `syn = "2"`, `quote = "1"`, `proc-macro2 = "1"`, and dev-deps `trybuild` + `pyenum` (path)
+- [x] T005 [P] Create `crates/pyenum-test/Cargo.toml` with `[lib] crate-type = ["cdylib"]`, `publish = false`, pyo3 feature passthrough to `pyenum`, and the pyo3 `extension-module` feature
+- [x] T006 [P] Write `LICENSE` at the repo root (MIT text with the project's copyright line)
+- [x] T007 [P] Write `README.md` at the repo root summarising the project, linking to `specs/001-pyenum-derive/`, and embedding the minimal quickstart snippet from [quickstart.md](./quickstart.md)
+- [ ] T008 [P] Write `pyproject.toml` at the repo root declaring the dev/test dependency group only (pytest, pytest-cov, maturin, pydantic, fastapi, sqlalchemy, httpx) with `publishable = false` equivalent (no `[project]` dist metadata, or `[project].name = "pyenum-dev"` marked internal) — only `python/pyproject.toml` exists; a root copy is still pending
+- [x] T009 [P] Scaffold `.github/workflows/test.yml` with a matrix skeleton (`pyo3-feature = [pyo3-0_25, pyo3-0_26, pyo3-0_27, pyo3-0_28]` × `python = [3.11, 3.12, 3.13]` × `os = [ubuntu-latest, macos-latest]`) — jobs for `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test --features $pyo3-feature --no-default-features`, and `pytest` will be filled in later phases — pyo3-feature axis collapsed to single pinned version per Q6
+- [ ] T010 [P] Create empty module files so the skeleton compiles: `crates/pyenum/src/lib.rs`, `crates/pyenum/src/prelude.rs`, `crates/pyenum/src/compat.rs`, `crates/pyenum/src/trait_def.rs`, `crates/pyenum/src/cache.rs`, `crates/pyenum/src/construct.rs`, `crates/pyenum/src/convert.rs`, `crates/pyenum/src/register.rs` (each with a `//! module placeholder` doc-comment) — `prelude.rs`, `compat.rs`, `convert.rs` were never created (obsoleted by pinning to PyO3 0.28 + merging conversion codegen into the derive output); remaining files all exist
+- [x] T011 [P] Create empty proc-macro module files: `crates/pyenum-derive/src/lib.rs`, `crates/pyenum-derive/src/parse.rs`, `crates/pyenum-derive/src/validate.rs`, `crates/pyenum-derive/src/codegen.rs`, `crates/pyenum-derive/src/reserved.rs`
+- [x] T012 [P] Create empty cdylib entry point `crates/pyenum-test/src/lib.rs` with `#[pymodule] fn pyenum_test<'py>(m: &pyo3::Bound<'py, pyo3::types::PyModule>) -> pyo3::PyResult<()> { Ok(()) }`
+- [x] T013 [P] Create `crates/pyenum-derive/tests/ui.rs` as the trybuild runner entry point; add empty `crates/pyenum-derive/tests/ui/accept/` and `crates/pyenum-derive/tests/ui/fail/` directories with `.gitkeep` — landed as `crates/pyenum-derive/tests/trybuild.rs`
+- [x] T014 [P] Create `tests/conftest.py` with a session-scoped `pyenum_test` fixture that runs `maturin develop --manifest-path crates/pyenum-test/Cargo.toml --quiet` once before the suite and then `import pyenum_test`
 
 **Checkpoint**: `cargo check --workspace --no-default-features --features pyo3-0_28` succeeds; `pytest tests/` runs (empty suite OK).
 
@@ -62,16 +62,16 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 **⚠️ CRITICAL**: No user-story work may begin until this phase is complete. Every test in Phase 3+ assumes these modules compile and export stable names.
 
-- [ ] T015 Implement the exactly-one-`pyo3-0_XX`-feature guard in `crates/pyenum/src/lib.rs` using `#[cfg(all(feature = "pyo3-0_25", feature = "pyo3-0_26", ...))] compile_error!(...)` for each pairwise conflict and a symmetric "none-active" guard
-- [ ] T016 Implement `crates/pyenum/src/compat.rs` with per-version type aliases (`PyTypeRef`, `ModuleArg<'py>`, `PyAnyRef<'py>`), the `OnceCell<T>` re-export (`pyo3::sync::GILOnceCell` on 0.26+, equivalent on 0.25), and an empty `macro_rules! version_shim!` stub — feature-gated with `#[cfg(feature = "pyo3-0_XX")]` only here, nowhere else
-- [ ] T017 [P] Implement `crates/pyenum-derive/src/reserved.rs` — compile-time sorted `&[&str]` covering: Python 3.13 keywords, enum-reserved member names (`_name_`, `_value_`, `_missing_`, `_generate_next_value_`, `_ignore_`, `_order_`, `name`, `value`), and enum-special dunders (`__init__`, `__new__`, `__class__`, `__members__`, `__init_subclass__`, `__set_name__`, `__class_getitem__`, `__repr__`, `__str__`, `__hash__`, `__eq__`, `__format__`, `__dir__`, `__bool__`, `__reduce_ex__`); expose `fn is_reserved(name: &str) -> Option<ReservedKind>` using binary search
-- [ ] T018 [P] Define `PyEnumBase` (enum with variants `Enum`, `IntEnum`, `StrEnum`, `Flag`, `IntFlag`), `VariantLiteral` (`Int(i64)`, `Str(&'static str)`, `Auto`), and `PyEnumSpec` (with `name`, `base`, `variants`) in `crates/pyenum/src/trait_def.rs` per [data-model.md](./data-model.md)
-- [ ] T019 [P] Declare the `PyEnum` trait skeleton in `crates/pyenum/src/trait_def.rs` per [contracts/trait-contract.md](./contracts/trait-contract.md) — three methods + `const SPEC`; provide default impls that return `PyErr::new::<PyRuntimeError, _>("not implemented")` so the trait compiles without a concrete derive
-- [ ] T020 [P] Expose a `#[doc(hidden)] pub mod __private` in `crates/pyenum/src/lib.rs` that re-exports the names the proc-macro will reference (initially empty; populated per-story)
-- [ ] T021 [P] Wire the `#[proc_macro_derive(PyEnum, attributes(pyenum))]` entry point in `crates/pyenum-derive/src/lib.rs`; the initial body emits a no-op `impl PyEnum` so the derive exists even before parsing/codegen are real
-- [ ] T022 Wire `crates/pyenum-derive/tests/ui.rs` to run `trybuild::TestCases::new().compile_fail("tests/ui/fail/*.rs"); .pass("tests/ui/accept/*.rs")` — the empty directories from T013 keep it green
-- [ ] T023 Fill the `pytest` and `cargo` matrix cells in `.github/workflows/test.yml` so CI invokes `cargo check --workspace --no-default-features --features $pyo3-feature` on every matrix cell and uploads `cargo-llvm-cov` + `pytest-cov` coverage artefacts (thresholds wired up in polish phase)
-- [ ] T024 Run `cargo check --workspace --no-default-features --features pyo3-0_25` and repeat for `0_26`, `0_27`, `0_28`; every feature combination MUST compile before any user story begins
+- [x] ~~T015 Implement the exactly-one-`pyo3-0_XX`-feature guard in `crates/pyenum/src/lib.rs` using `#[cfg(all(feature = "pyo3-0_25", feature = "pyo3-0_26", ...))] compile_error!(...)` for each pairwise conflict and a symmetric "none-active" guard~~ — OBSOLETED by Q6 (single pinned PyO3 line)
+- [x] ~~T016 Implement `crates/pyenum/src/compat.rs` with per-version type aliases (`PyTypeRef`, `ModuleArg<'py>`, `PyAnyRef<'py>`), the `OnceCell<T>` re-export (`pyo3::sync::GILOnceCell` on 0.26+, equivalent on 0.25), and an empty `macro_rules! version_shim!` stub — feature-gated with `#[cfg(feature = "pyo3-0_XX")]` only here, nowhere else~~ — OBSOLETED by Q6
+- [x] T017 [P] Implement `crates/pyenum-derive/src/reserved.rs` — compile-time sorted `&[&str]` covering: Python 3.13 keywords, enum-reserved member names (`_name_`, `_value_`, `_missing_`, `_generate_next_value_`, `_ignore_`, `_order_`, `name`, `value`), and enum-special dunders (`__init__`, `__new__`, `__class__`, `__members__`, `__init_subclass__`, `__set_name__`, `__class_getitem__`, `__repr__`, `__str__`, `__hash__`, `__eq__`, `__format__`, `__dir__`, `__bool__`, `__reduce_ex__`); expose `fn is_reserved(name: &str) -> Option<ReservedKind>` using binary search
+- [x] T018 [P] Define `PyEnumBase` (enum with variants `Enum`, `IntEnum`, `StrEnum`, `Flag`, `IntFlag`), `VariantLiteral` (`Int(i64)`, `Str(&'static str)`, `Auto`), and `PyEnumSpec` (with `name`, `base`, `variants`) in `crates/pyenum/src/trait_def.rs` per [data-model.md](./data-model.md)
+- [x] T019 [P] Declare the `PyEnum` trait skeleton in `crates/pyenum/src/trait_def.rs` per [contracts/trait-contract.md](./contracts/trait-contract.md) — three methods + `const SPEC`; provide default impls that return `PyErr::new::<PyRuntimeError, _>("not implemented")` so the trait compiles without a concrete derive
+- [x] T020 [P] Expose a `#[doc(hidden)] pub mod __private` in `crates/pyenum/src/lib.rs` that re-exports the names the proc-macro will reference (initially empty; populated per-story)
+- [x] T021 [P] Wire the `#[proc_macro_derive(PyEnum, attributes(pyenum))]` entry point in `crates/pyenum-derive/src/lib.rs`; the initial body emits a no-op `impl PyEnum` so the derive exists even before parsing/codegen are real
+- [x] T022 Wire `crates/pyenum-derive/tests/ui.rs` to run `trybuild::TestCases::new().compile_fail("tests/ui/fail/*.rs"); .pass("tests/ui/accept/*.rs")` — the empty directories from T013 keep it green
+- [x] T023 Fill the `pytest` and `cargo` matrix cells in `.github/workflows/test.yml` so CI invokes `cargo check --workspace --no-default-features --features $pyo3-feature` on every matrix cell and uploads `cargo-llvm-cov` + `pytest-cov` coverage artefacts (thresholds wired up in polish phase) — pyo3-feature axis collapsed to single pinned version per Q6
+- [x] ~~T024 Run `cargo check --workspace --no-default-features --features pyo3-0_25` and repeat for `0_26`, `0_27`, `0_28`; every feature combination MUST compile before any user story begins~~ — OBSOLETED by Q6
 
 **Checkpoint**: Workspace compiles on all four `pyo3-0_XX` features. `cargo test --workspace` and `pytest tests/` both run cleanly (empty). Trybuild runner wired.
 
@@ -87,26 +87,26 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 > **TDD RULE**: Write these tests FIRST. Run them and confirm they FAIL for the expected reason before any implementation.
 
-- [ ] T025 [P] [US1] [RED] Add trybuild accept fixture `crates/pyenum-derive/tests/ui/accept/minimal_unit_enum.rs` exercising `#[derive(PyEnum)]` on a unit-variant enum — must fail today (proc-macro emits only no-op impl)
-- [ ] T026 [P] [US1] [RED] Add Rust integration test `crates/pyenum/tests/subclass.rs` using `pyo3::Python::with_gil` + `auto-initialize` to build `Color`'s class and assert `class.is_subclass(py.import("enum")?.getattr("Enum")?)?` — must fail
-- [ ] T027 [P] [US1] [RED] Register a `#[derive(PyEnum)] enum Color { Red, Green, Blue }` plus `m.add_enum::<Color>()?` in `crates/pyenum-test/src/lib.rs` — currently fails to build because `add_enum` is unimplemented
-- [ ] T028 [P] [US1] [RED] Add `tests/test_protocol_enum.py` asserting: `issubclass(pyenum_test.Color, enum.Enum)`, `list(pyenum_test.Color)` order matches declaration, `pyenum_test.Color["Red"]` returns the member, `pyenum_test.Color(1)` returns the first variant — must fail (module cannot import)
+- [x] T025 [P] [US1] [RED] Add trybuild accept fixture `crates/pyenum-derive/tests/ui/accept/minimal_unit_enum.rs` exercising `#[derive(PyEnum)]` on a unit-variant enum — must fail today (proc-macro emits only no-op impl) — landed as `basic_enum.rs`
+- [ ] T026 [P] [US1] [RED] Add Rust integration test `crates/pyenum/tests/subclass.rs` using `pyo3::Python::with_gil` + `auto-initialize` to build `Color`'s class and assert `class.is_subclass(py.import("enum")?.getattr("Enum")?)?` — must fail — covered functionally by `tests/test_protocol_enum.py`; the pure-Rust `crates/pyenum/tests/` harness is still empty
+- [x] T027 [P] [US1] [RED] Register a `#[derive(PyEnum)] enum Color { Red, Green, Blue }` plus `m.add_enum::<Color>()?` in `crates/pyenum-test/src/lib.rs` — currently fails to build because `add_enum` is unimplemented
+- [x] T028 [P] [US1] [RED] Add `tests/test_protocol_enum.py` asserting: `issubclass(pyenum_test.Color, enum.Enum)`, `list(pyenum_test.Color)` order matches declaration, `pyenum_test.Color["Red"]` returns the member, `pyenum_test.Color(1)` returns the first variant — must fail (module cannot import)
 
 ### Implementation for User Story 1 (GREEN phase)
 
-- [ ] T029 [US1] [GREEN] Implement `syn`-based unit-enum parsing in `crates/pyenum-derive/src/parse.rs`: walk `Data::Enum.variants`, collect `(ident, discriminant)` in declaration order; panic-free errors for non-`Fields::Unit` are deferred to US5 (return an error sentinel for now so US1 accept fixture compiles)
-- [ ] T030 [US1] [GREEN] Fill `crates/pyenum/src/compat.rs` aliases for `pyo3-0_28` first (`type ModuleArg<'py> = &'py Bound<'py, PyModule>; type PyTypeRef = Py<PyType>; pub use pyo3::sync::GILOnceCell as OnceCell;`) so downstream code compiles on the default feature
-- [ ] T031 [US1] [GREEN] Implement `build_py_enum` in `crates/pyenum/src/construct.rs`: import `enum`, call `Enum(name, [(name_i, value_i), …])`, return `Py<PyType>` — passes T026 when combined with T032–T034
-- [ ] T032 [US1] [GREEN] Implement the per-type `GILOnceCell` accessor helper in `crates/pyenum/src/cache.rs` (`fn get_or_build<'py>(py, once, spec) -> PyResult<Bound<'py, PyType>>`)
-- [ ] T033 [US1] [GREEN] Implement `add_enum::<T>(m)` free function + `PyModuleExt::add_enum` blanket impl in `crates/pyenum/src/register.rs` to pass T027
-- [ ] T034 [US1] [GREEN] Emit the minimal `impl PyEnum for MyEnum` (with `SPEC` + `py_enum_class` + placeholder `to_py_member`/`from_py_member`) from `crates/pyenum-derive/src/codegen.rs` to pass T025 and T026
-- [ ] T035 [US1] [GREEN] Populate `pyenum::__private` in `crates/pyenum/src/lib.rs` with the symbols the derive output references (`PyEnumSpec`, `PyEnumBase`, `VariantLiteral`, `OnceCell`, `build_py_enum`, trait path) — keeps proc-macro output version-agnostic
-- [ ] T036 [US1] [GREEN] Run `maturin develop --manifest-path crates/pyenum-test/Cargo.toml` inside the pytest fixture; rerun `pytest tests/test_protocol_enum.py` and confirm T028 passes
+- [x] T029 [US1] [GREEN] Implement `syn`-based unit-enum parsing in `crates/pyenum-derive/src/parse.rs`: walk `Data::Enum.variants`, collect `(ident, discriminant)` in declaration order; panic-free errors for non-`Fields::Unit` are deferred to US5 (return an error sentinel for now so US1 accept fixture compiles)
+- [x] ~~T030 [US1] [GREEN] Fill `crates/pyenum/src/compat.rs` aliases for `pyo3-0_28` first (`type ModuleArg<'py> = &'py Bound<'py, PyModule>; type PyTypeRef = Py<PyType>; pub use pyo3::sync::GILOnceCell as OnceCell;`) so downstream code compiles on the default feature~~ — OBSOLETED: compat shim dropped; runtime uses `pyo3::sync::PyOnceLock` + `Bound`/`Py` types directly
+- [x] T031 [US1] [GREEN] Implement `build_py_enum` in `crates/pyenum/src/construct.rs`: import `enum`, call `Enum(name, [(name_i, value_i), …])`, return `Py<PyType>` — passes T026 when combined with T032–T034
+- [x] T032 [US1] [GREEN] Implement the per-type `GILOnceCell` accessor helper in `crates/pyenum/src/cache.rs` (`fn get_or_build<'py>(py, once, spec) -> PyResult<Bound<'py, PyType>>`)
+- [x] T033 [US1] [GREEN] Implement `add_enum::<T>(m)` free function + `PyModuleExt::add_enum` blanket impl in `crates/pyenum/src/register.rs` to pass T027
+- [x] T034 [US1] [GREEN] Emit the minimal `impl PyEnum for MyEnum` (with `SPEC` + `py_enum_class` + placeholder `to_py_member`/`from_py_member`) from `crates/pyenum-derive/src/codegen.rs` to pass T025 and T026
+- [x] T035 [US1] [GREEN] Populate `pyenum::__private` in `crates/pyenum/src/lib.rs` with the symbols the derive output references (`PyEnumSpec`, `PyEnumBase`, `VariantLiteral`, `OnceCell`, `build_py_enum`, trait path) — keeps proc-macro output version-agnostic
+- [x] T036 [US1] [GREEN] Run `maturin develop --manifest-path crates/pyenum-test/Cargo.toml` inside the pytest fixture; rerun `pytest tests/test_protocol_enum.py` and confirm T028 passes
 
 ### Refactor for User Story 1 (REFACTOR phase)
 
 - [ ] T037 [US1] [REFACTOR] Extract the `(name, value)` member-list construction helper in `crates/pyenum/src/construct.rs` so US2 can reuse it; rerun `cargo test --workspace` + `pytest tests/test_protocol_enum.py`
-- [ ] T038 [US1] [REFACTOR] Confirm no feature-gated `cfg` attrs exist outside `crates/pyenum/src/compat.rs` via `rg "#\[cfg\(feature\s*=\s*\"pyo3-" crates/pyenum/src/ -g '!compat.rs'` (should print nothing); rerun full test suite
+- [x] ~~T038 [US1] [REFACTOR] Confirm no feature-gated `cfg` attrs exist outside `crates/pyenum/src/compat.rs` via `rg "#\[cfg\(feature\s*=\s*\"pyo3-" crates/pyenum/src/ -g '!compat.rs'` (should print nothing); rerun full test suite~~ — OBSOLETED by Q6 (no feature-gated `cfg` attrs anywhere)
 - [ ] T039 [US1] [REFACTOR] Verify `cargo-llvm-cov --package pyenum --fail-under-lines 80` passes for the US1-touched modules
 
 **Checkpoint**: User Story 1 fully functional on `pyo3-0_28`. MVP shippable once polish-phase docs land. Other pyo3 features still pending (land during US2–US5).
@@ -121,25 +121,25 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 ### Tests for User Story 2 (MANDATORY - RED phase) ⚠️
 
-- [ ] T040 [P] [US2] [RED] Add trybuild accept fixtures: `crates/pyenum-derive/tests/ui/accept/int_enum.rs`, `str_enum.rs`, `flag.rs`, `int_flag.rs` — each fails because `#[pyenum(base = …)]` is not parsed yet
-- [ ] T041 [P] [US2] [RED] Register one enum per base in `crates/pyenum-test/src/lib.rs` (e.g., `HttpStatus` / `Greeting` / `Perms` / `BitPerms`) — fails to build because attribute is unrecognised
-- [ ] T042 [P] [US2] [RED] Add `tests/test_protocol_intenum.py` asserting `issubclass(HttpStatus, enum.IntEnum)`, integer arithmetic, `HttpStatus(200) == 200` — must fail
-- [ ] T043 [P] [US2] [RED] Add `tests/test_protocol_strenum.py` asserting `issubclass(Greeting, enum.StrEnum)`, string concatenation, `.value` equals the declared (or auto-derived) string — must fail
-- [ ] T044 [P] [US2] [RED] Add `tests/test_protocol_flag.py` asserting `issubclass(Perms, enum.Flag)`, bitwise composition `(Read | Write) & Read == Read`, explicit zero-member presence when declared — must fail
-- [ ] T045 [P] [US2] [RED] Add `tests/test_protocol_intflag.py` asserting `issubclass(BitPerms, enum.IntFlag)`, bitwise + integer arithmetic together — must fail
+- [ ] T040 [P] [US2] [RED] Add trybuild accept fixtures: `crates/pyenum-derive/tests/ui/accept/int_enum.rs`, `str_enum.rs`, `flag.rs`, `int_flag.rs` — each fails because `#[pyenum(base = …)]` is not parsed yet — partial: `int_discriminants.rs`, `strenum_auto_lowercase.rs`, `strenum_explicit_value.rs` landed; dedicated `flag.rs` / `int_flag.rs` accept fixtures still pending
+- [x] T041 [P] [US2] [RED] Register one enum per base in `crates/pyenum-test/src/lib.rs` (e.g., `HttpStatus` / `Greeting` / `Perms` / `BitPerms`) — fails to build because attribute is unrecognised — landed as `HttpStatus` / `Greeting` / `Permission` / `BitPerms`
+- [x] T042 [P] [US2] [RED] Add `tests/test_protocol_intenum.py` asserting `issubclass(HttpStatus, enum.IntEnum)`, integer arithmetic, `HttpStatus(200) == 200` — must fail
+- [x] T043 [P] [US2] [RED] Add `tests/test_protocol_strenum.py` asserting `issubclass(Greeting, enum.StrEnum)`, string concatenation, `.value` equals the declared (or auto-derived) string — must fail
+- [x] T044 [P] [US2] [RED] Add `tests/test_protocol_flag.py` asserting `issubclass(Perms, enum.Flag)`, bitwise composition `(Read | Write) & Read == Read`, explicit zero-member presence when declared — must fail
+- [x] T045 [P] [US2] [RED] Add `tests/test_protocol_intflag.py` asserting `issubclass(BitPerms, enum.IntFlag)`, bitwise + integer arithmetic together — must fail
 - [ ] T046 [P] [US2] [RED] Add `tests/test_auto_values.py` covering Q1: `Enum`/`IntEnum` auto → 1-based ints, `Flag`/`IntFlag` auto → powers of two, `StrEnum` auto → variant name; mixed explicit/defaulted variants continue correctly — must fail
-- [ ] T047 [P] [US2] [RED] Add `tests/test_aliases.py` asserting that declaring two variants with the same explicit value produces one canonical member and one alias (`SameValue(1) is SameValue.First`) — must fail
-- [ ] T048 [P] [US2] [RED] Add `tests/test_name_passthrough.py` (Q2) asserting `pyenum_test.Color.Red` works and `pyenum_test.Color["Red"]` resolves — currently passes for US1 but belongs logically with US2 naming semantics; ensure it runs
+- [ ] T047 [P] [US2] [RED] Add `tests/test_aliases.py` asserting that declaring two variants with the same explicit value produces one canonical member and one alias (`SameValue(1) is SameValue.First`) — must fail — superseded in spirit by Phase 7.5 HIGH #2: pyenum-derive now rejects alias-creating variants at compile time rather than surfacing them; this Python-side alias fixture is now redundant
+- [ ] T048 [P] [US2] [RED] Add `tests/test_name_passthrough.py` (Q2) asserting `pyenum_test.Color.Red` works and `pyenum_test.Color["Red"]` resolves — currently passes for US1 but belongs logically with US2 naming semantics; ensure it runs — name-passthrough assertions live inside `tests/test_protocol_enum.py` already; a dedicated file is still pending
 
 ### Implementation for User Story 2 (GREEN phase)
 
-- [ ] T049 [US2] [GREEN] Parse `#[pyenum(base = "…", name = "…")]` in `crates/pyenum-derive/src/parse.rs` using `syn::meta::ParseNestedMeta`; reject unknown keys and duplicates (unknown-key handling fully exercised in US5)
-- [ ] T050 [US2] [GREEN] Validate base/value literal compatibility in `crates/pyenum-derive/src/validate.rs`: integer literals only for `Enum`/`IntEnum`/`Flag`/`IntFlag`; auto-only for `StrEnum` in v1; route via `VariantLiteral`
-- [ ] T051 [US2] [GREEN] Extend `crates/pyenum/src/construct.rs` to import the correct `enum` base attribute (`enum.IntEnum`, `enum.StrEnum`, `enum.Flag`, `enum.IntFlag`) based on `PyEnumSpec.base`
-- [ ] T052 [US2] [GREEN] Emit `enum.auto()` for `VariantLiteral::Auto` in the member list constructed by `construct.rs` — CPython resolves values per-base, giving Q1 for free
-- [ ] T053 [US2] [GREEN] Update `crates/pyenum-derive/src/codegen.rs` to embed the chosen `PyEnumBase` variant in `SPEC` and emit each variant's `VariantLiteral` correctly
-- [ ] T054 [US2] [GREEN] Verify alias behaviour passes by running T047 against the built `pyenum_test` — fix in `construct.rs` if CPython's alias semantics surface differently through the functional API
-- [ ] T055 [US2] [GREEN] Rerun pytest protocol tests (T042–T047) after `maturin develop`; confirm all green
+- [x] T049 [US2] [GREEN] Parse `#[pyenum(base = "…", name = "…")]` in `crates/pyenum-derive/src/parse.rs` using `syn::meta::ParseNestedMeta`; reject unknown keys and duplicates (unknown-key handling fully exercised in US5)
+- [x] T050 [US2] [GREEN] Validate base/value literal compatibility in `crates/pyenum-derive/src/validate.rs`: integer literals only for `Enum`/`IntEnum`/`Flag`/`IntFlag`; auto-only for `StrEnum` in v1; route via `VariantLiteral` — `StrEnum` now also accepts explicit `#[pyenum(value = "...")]` literals (Phase 7.5 HIGH #3)
+- [x] T051 [US2] [GREEN] Extend `crates/pyenum/src/construct.rs` to import the correct `enum` base attribute (`enum.IntEnum`, `enum.StrEnum`, `enum.Flag`, `enum.IntFlag`) based on `PyEnumSpec.base`
+- [x] T052 [US2] [GREEN] Emit `enum.auto()` for `VariantLiteral::Auto` in the member list constructed by `construct.rs` — CPython resolves values per-base, giving Q1 for free
+- [x] T053 [US2] [GREEN] Update `crates/pyenum-derive/src/codegen.rs` to embed the chosen `PyEnumBase` variant in `SPEC` and emit each variant's `VariantLiteral` correctly
+- [x] ~~T054 [US2] [GREEN] Verify alias behaviour passes by running T047 against the built `pyenum_test` — fix in `construct.rs` if CPython's alias semantics surface differently through the functional API~~ — OBSOLETED by Phase 7.5 HIGH #2 (alias-creating variants now rejected at compile time)
+- [x] T055 [US2] [GREEN] Rerun pytest protocol tests (T042–T047) after `maturin develop`; confirm all green
 
 ### Refactor for User Story 2 (REFACTOR phase)
 
@@ -158,19 +158,19 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 ### Tests for User Story 3 (MANDATORY - RED phase) ⚠️
 
-- [ ] T058 [P] [US3] [RED] Add Rust integration test `crates/pyenum/tests/convert.rs`: builds Color, round-trips every variant through `IntoPyObject`/`FromPyObject` under `Python::with_gil`, asserts identity preserved — fails (convert.rs empty)
-- [ ] T059 [P] [US3] [RED] Add Rust integration test `crates/pyenum/tests/from_py.rs`: builds Color, calls `FromPyObject` with a foreign Python object (a plain `int`), asserts `PyTypeError` is raised with a message containing `"Color"` — fails
-- [ ] T060 [P] [US3] [RED] Add `#[pyfunction] fn roundtrip(c: Color) -> Color` and `fn to_int(c: HttpStatus) -> i64` to `crates/pyenum-test/src/lib.rs`, exposing them in the module — fails to build
-- [ ] T061 [P] [US3] [RED] Add `tests/test_conversion.py` calling `pyenum_test.roundtrip(Color.Red) is Color.Red`, `pyenum_test.roundtrip(Color.Green)`, and asserting `pyenum_test.roundtrip(42)` raises `TypeError` with class-name context — must fail
+- [ ] T058 [P] [US3] [RED] Add Rust integration test `crates/pyenum/tests/convert.rs`: builds Color, round-trips every variant through `IntoPyObject`/`FromPyObject` under `Python::with_gil`, asserts identity preserved — fails (convert.rs empty) — currently covered by `tests/test_conversion.py` only; pure-Rust harness still empty
+- [ ] T059 [P] [US3] [RED] Add Rust integration test `crates/pyenum/tests/from_py.rs`: builds Color, calls `FromPyObject` with a foreign Python object (a plain `int`), asserts `PyTypeError` is raised with a message containing `"Color"` — fails — ditto; covered from Python side only
+- [x] T060 [P] [US3] [RED] Add `#[pyfunction] fn roundtrip(c: Color) -> Color` and `fn to_int(c: HttpStatus) -> i64` to `crates/pyenum-test/src/lib.rs`, exposing them in the module — fails to build — landed as `color_roundtrip` / `http_roundtrip` + peers for every base
+- [x] T061 [P] [US3] [RED] Add `tests/test_conversion.py` calling `pyenum_test.roundtrip(Color.Red) is Color.Red`, `pyenum_test.roundtrip(Color.Green)`, and asserting `pyenum_test.roundtrip(42)` raises `TypeError` with class-name context — must fail
 - [ ] T062 [P] [US3] [RED] Add `tests/test_registration.py` (Q4) asserting both `m.add_enum::<T>()` and `pyenum::add_enum::<T>(&m)` surface the same class under `T::SPEC.name` — fails
 
 ### Implementation for User Story 3 (GREEN phase)
 
-- [ ] T063 [US3] [GREEN] Implement `impl<'py> IntoPyObject<'py> for T: PyEnum` and `impl<'py> IntoPyObject<'py> for &T` in `crates/pyenum/src/convert.rs` (delegating to `T::to_py_member`) — gated to `pyo3-0_26+` via `compat`
-- [ ] T064 [US3] [GREEN] Implement `impl<'py> FromPyObject<'py> for T: PyEnum` in `crates/pyenum/src/convert.rs` delegating to `T::from_py_member` — passes T058, T059, T061
-- [ ] T065 [US3] [GREEN] Implement `T::to_py_member` codegen in `crates/pyenum-derive/src/codegen.rs`: `match self { MyEnum::X => py_enum_class(py)?.getattr("X")? … }`
-- [ ] T066 [US3] [GREEN] Implement `T::from_py_member` codegen: check `obj.is_instance(py_enum_class(py)?)?`, map back via name or `.value` comparison; raise `PyTypeError::new_err(format!("expected {}, got {}", T::SPEC.name, obj.get_type().name()?))` otherwise
-- [ ] T067 [US3] [GREEN] Verify Q4 `add_enum` path in `crates/pyenum/src/register.rs` matches T062 exactly; adjust free-fn vs extension-method bodies to share implementation
+- [x] T063 [US3] [GREEN] Implement `impl<'py> IntoPyObject<'py> for T: PyEnum` and `impl<'py> IntoPyObject<'py> for &T` in `crates/pyenum/src/convert.rs` (delegating to `T::to_py_member`) — gated to `pyo3-0_26+` via `compat` — landed inside the derive codegen output instead of a standalone `convert.rs`
+- [x] T064 [US3] [GREEN] Implement `impl<'py> FromPyObject<'py> for T: PyEnum` in `crates/pyenum/src/convert.rs` delegating to `T::from_py_member` — passes T058, T059, T061 — emitted by `pyenum-derive/src/codegen.rs`
+- [x] T065 [US3] [GREEN] Implement `T::to_py_member` codegen in `crates/pyenum-derive/src/codegen.rs`: `match self { MyEnum::X => py_enum_class(py)?.getattr("X")? … }`
+- [x] T066 [US3] [GREEN] Implement `T::from_py_member` codegen: check `obj.is_instance(py_enum_class(py)?)?`, map back via name or `.value` comparison; raise `PyTypeError::new_err(format!("expected {}, got {}", T::SPEC.name, obj.get_type().name()?))` otherwise
+- [x] T067 [US3] [GREEN] Verify Q4 `add_enum` path in `crates/pyenum/src/register.rs` matches T062 exactly; adjust free-fn vs extension-method bodies to share implementation
 
 ### Refactor for User Story 3 (REFACTOR phase)
 
@@ -189,15 +189,15 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 ### Tests for User Story 4 (MANDATORY - RED phase) ⚠️
 
-- [ ] T070 [P] [US4] [RED] Add Rust integration test `crates/pyenum/tests/cache.rs` installing a test-only counter hook in `pyenum::cache` (via a `#[cfg(test)] pub(crate) fn reset_counter()` / `read_counter()`), running 10k round-trips under `Python::with_gil`, asserting counter == 1 — fails (hook not present)
-- [ ] T071 [P] [US4] [RED] Add an `AtomicUsize` construction counter and helper `#[pyfunction] fn _construction_count(cls: &Bound<'_, PyType>) -> usize` to `crates/pyenum-test/src/lib.rs`, readable from pytest — fails to build
-- [ ] T072 [P] [US4] [RED] Add `tests/test_cache.py`: 10k `pyenum_test.roundtrip(Color.Red)` calls + assert `pyenum_test._construction_count(pyenum_test.Color) == 1`; also assert `pyenum_test.Color is pyenum_test.Color` (identity via two imports) — must fail
+- [ ] T070 [P] [US4] [RED] Add Rust integration test `crates/pyenum/tests/cache.rs` installing a test-only counter hook in `pyenum::cache` (via a `#[cfg(test)] pub(crate) fn reset_counter()` / `read_counter()`), running 10k round-trips under `Python::with_gil`, asserting counter == 1 — fails (hook not present) — identity assertion covered from pytest; pure-Rust counter harness still not added
+- [ ] T071 [P] [US4] [RED] Add an `AtomicUsize` construction counter and helper `#[pyfunction] fn _construction_count(cls: &Bound<'_, PyType>) -> usize` to `crates/pyenum-test/src/lib.rs`, readable from pytest — fails to build — counter fn still not exposed; `test_cache.py` currently checks class-identity stability only
+- [x] T072 [P] [US4] [RED] Add `tests/test_cache.py`: 10k `pyenum_test.roundtrip(Color.Red)` calls + assert `pyenum_test._construction_count(pyenum_test.Color) == 1`; also assert `pyenum_test.Color is pyenum_test.Color` (identity via two imports) — must fail — landed in skeleton form; construction-count assertion deferred until T071 ships
 
 ### Implementation for User Story 4 (GREEN phase)
 
 - [ ] T073 [US4] [GREEN] Add the test-only `construction_counter` helper in `crates/pyenum/src/cache.rs` (behind `#[cfg(test)]` inside the runtime crate; expose `pub(crate)` accessor). Increment inside `get_or_build` only when the closure actually runs (first call)
 - [ ] T074 [US4] [GREEN] Wire the production counter in `crates/pyenum-test/src/lib.rs` using a module-level `AtomicUsize` incremented inside the `PyEnum::py_enum_class` path — exposed via T071
-- [ ] T075 [US4] [GREEN] Confirm `compat::OnceCell::get_or_try_init` guarantees serialised single initialisation on every supported `pyo3-0_XX` feature; add feature-gated documentation note in `crates/pyenum/src/compat.rs`
+- [x] ~~T075 [US4] [GREEN] Confirm `compat::OnceCell::get_or_try_init` guarantees serialised single initialisation on every supported `pyo3-0_XX` feature; add feature-gated documentation note in `crates/pyenum/src/compat.rs`~~ — OBSOLETED by Q6; documentation now lives on `pyo3::sync::PyOnceLock` upstream
 - [ ] T076 [US4] [GREEN] Rerun T070–T072 after rebuilding `pyenum_test`; all three must now pass
 
 ### Refactor for User Story 4 (REFACTOR phase)

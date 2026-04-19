@@ -1,0 +1,34 @@
+# cargo-release configuration for the pyenum workspace.
+#
+# Usage (developer machine):
+#
+#     cargo install cargo-release
+#
+#     cargo release patch --workspace            # dry-run
+#     cargo release patch --workspace --execute  # bump + commit + tag + push
+#
+# The tag push triggers `.github/workflows/publish.yml`, which owns the
+# crates.io + PyPI + GitHub Release legs. cargo-release itself does not
+# publish — that stays in CI.
+
+# All member crates inherit [workspace.package].version = true, so a
+# single workspace-version bump propagates to every crate.
+shared-version = true
+
+# One commit for the whole workspace bump (vs. one commit per crate).
+consolidate-commits = true
+
+# Tag convention matches `publish.yml`'s trigger: `on: push: tags: [v*]`.
+tag-name = "v{{version}}"
+tag-message = "pyenum {{version}}"
+pre-release-commit-message = "chore(release): {{version}}"
+
+# Do NOT publish from the developer machine; CI handles it after the
+# tag lands. `push = true` + `--follow-tags` ensures the bump commit
+# and the tag reach origin together.
+publish = false
+push = true
+push-options = ["--follow-tags"]
+
+# `pyenum-test` already has `publish = false` in its Cargo.toml, so
+# cargo-release skips it automatically — no per-crate override needed.
