@@ -15,12 +15,21 @@ mod validate;
 
 /// Derive a [`pyenum::PyEnum`] implementation for a unit-variant Rust enum.
 ///
-/// Attributes (all optional):
+/// Enum-level attributes (all optional):
 ///
 /// * `#[pyenum(base = "Enum" | "IntEnum" | "StrEnum" | "Flag" | "IntFlag")]`
 ///   — select the Python base class. Defaults to `"Enum"`.
 /// * `#[pyenum(name = "...")]` — override the Python class name. Defaults
 ///   to the Rust enum identifier.
+///
+/// Variant-level attributes (all optional, mutually exclusive with a Rust
+/// discriminant on the same variant):
+///
+/// * `#[pyenum(value = "...")]` — explicit Python string value. Only
+///   valid when the enum base is `StrEnum` or `Enum`. Without this
+///   attribute (and without a Rust discriminant), `StrEnum` variants
+///   default to Python's `auto()` semantics, which lowercase the variant
+///   name.
 #[proc_macro_derive(PyEnum, attributes(pyenum))]
 pub fn derive_pyenum(input: TokenStream) -> TokenStream {
     let spec = match parse::parse_derive_input(input.into()) {

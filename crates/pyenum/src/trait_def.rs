@@ -40,9 +40,8 @@ impl PyEnumBase {
 pub enum VariantLiteral {
     /// Explicit integer literal (from a Rust discriminant).
     Int(i64),
-    /// Explicit string literal.
-    ///
-    /// Reserved for future use; the v1 derive never emits this variant.
+    /// Explicit string literal from a variant-level
+    /// `#[pyenum(value = "...")]` attribute.
     Str(&'static str),
     /// Defer to Python's `enum.auto()` per-base semantics.
     Auto,

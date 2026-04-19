@@ -22,4 +22,5 @@ quote = { workspace = true }
 syn = { workspace = true }
 
 [dev-dependencies]
+pyenum = { path = "../pyenum" }
 trybuild = { workspace = true }

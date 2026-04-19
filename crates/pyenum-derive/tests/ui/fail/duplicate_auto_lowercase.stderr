@@ -1,0 +1,5 @@
+error: variant `HELLO` auto-lowercases to `"hello"`, which was already used by `Hello`; Python would make the second variant an alias of the first and break Rust-side round-trip identity (add an explicit `#[pyenum(value = "...")]` to disambiguate)
+ --> tests/ui/fail/duplicate_auto_lowercase.rs:7:5
+  |
+7 |     HELLO,
+  |     ^^^^^

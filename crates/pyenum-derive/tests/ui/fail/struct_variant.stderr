@@ -1,0 +1,5 @@
+error: variant `Structured` has fields; Python enum members must be unit variants
+ --> tests/ui/fail/struct_variant.rs:6:5
+  |
+6 |     Structured { inner: u8 },
+  |     ^^^^^^^^^^

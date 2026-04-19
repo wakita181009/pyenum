@@ -32,6 +32,17 @@ pub enum Greeting {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
+#[pyenum(base = "StrEnum")]
+pub enum Language {
+    #[pyenum(value = "Rust")]
+    Rust,
+    #[pyenum(value = "Python")]
+    Python,
+    #[pyenum(value = "TypeScript")]
+    TypeScript,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
 #[pyenum(base = "Flag")]
 pub enum Permission {
     Read = 1,
@@ -64,6 +75,11 @@ fn greeting_roundtrip(g: Greeting) -> Greeting {
 }
 
 #[pyfunction]
+fn language_roundtrip(l: Language) -> Language {
+    l
+}
+
+#[pyfunction]
 fn permission_roundtrip(p: Permission) -> Permission {
     p
 }
@@ -78,11 +94,13 @@ fn pyenum_test(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_enum::<Color>()?;
     m.add_enum::<HttpStatus>()?;
     m.add_enum::<Greeting>()?;
+    m.add_enum::<Language>()?;
     m.add_enum::<Permission>()?;
     m.add_enum::<BitPerms>()?;
     m.add_function(wrap_pyfunction!(color_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(http_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(greeting_roundtrip, m)?)?;
+    m.add_function(wrap_pyfunction!(language_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(permission_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(bitperms_roundtrip, m)?)?;
     Ok(())

@@ -1,0 +1,5 @@
+error: unknown pyenum base `NotARealBase`; expected one of `Enum`, `IntEnum`, `StrEnum`, `Flag`, `IntFlag`
+ --> tests/ui/fail/bad_base.rs:4:17
+  |
+4 | #[pyenum(base = "NotARealBase")]
+  |                 ^^^^^^^^^^^^^^

@@ -1,0 +1,5 @@
+error: variant `One` has both an `#[pyenum(value = ...)]` attribute and a Rust discriminant; specify only one
+ --> tests/ui/fail/value_and_discriminant.rs:7:11
+  |
+7 |     One = 1,
+  |           ^

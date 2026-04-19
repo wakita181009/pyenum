@@ -8,7 +8,10 @@
 
 use proc_macro2::{Span, TokenStream};
 use syn::spanned::Spanned;
-use syn::{Data, DeriveInput, Expr, ExprLit, Fields, Ident, Lit, LitInt, LitStr, Result};
+use syn::{
+    Attribute, Data, DeriveInput, Error, Expr, ExprLit, ExprUnary, Fields, Ident, Lit, LitInt,
+    LitStr, Result, UnOp, Variant,
+};
 
 /// Resolved `#[pyenum(...)]` attribute + enum metadata.
 pub(crate) struct DeriveSpec {
@@ -50,7 +53,7 @@ impl BaseSelector {
             "StrEnum" => Ok(BaseSelector::StrEnum),
             "Flag" => Ok(BaseSelector::Flag),
             "IntFlag" => Ok(BaseSelector::IntFlag),
-            other => Err(syn::Error::new(
+            other => Err(Error::new(
                 value.span(),
                 format!(
                     "unknown pyenum base `{other}`; expected one of \
@@ -72,8 +75,7 @@ pub(crate) struct VariantSpec {
 pub(crate) enum VariantValue {
     /// Explicit integer literal from a Rust discriminant.
     Int(i64),
-    /// Explicit string literal (reserved; not emitted by v1 parser).
-    #[allow(dead_code)]
+    /// Explicit string literal from `#[pyenum(value = "...")]`.
     Str(String),
     /// No discriminant — defer to CPython's `enum.auto()`.
     Auto,
@@ -87,7 +89,7 @@ pub(crate) fn parse_derive_input(input: TokenStream) -> Result<DeriveSpec> {
 
 fn parse(input: DeriveInput) -> Result<DeriveSpec> {
     if !input.generics.params.is_empty() || input.generics.where_clause.is_some() {
-        return Err(syn::Error::new(
+        return Err(Error::new(
             input.generics.span(),
             "#[derive(PyEnum)] cannot be applied to a generic or \
              lifetime-parameterised enum",
@@ -97,13 +99,13 @@ fn parse(input: DeriveInput) -> Result<DeriveSpec> {
     let data_enum = match input.data {
         Data::Enum(data) => data,
         Data::Struct(s) => {
-            return Err(syn::Error::new(
+            return Err(Error::new(
                 s.struct_token.span,
                 "#[derive(PyEnum)] can only be applied to enums, not structs",
             ));
         }
         Data::Union(u) => {
-            return Err(syn::Error::new(
+            return Err(Error::new(
                 u.union_token.span,
                 "#[derive(PyEnum)] can only be applied to enums, not unions",
             ));
@@ -111,7 +113,7 @@ fn parse(input: DeriveInput) -> Result<DeriveSpec> {
     };
 
     if data_enum.variants.is_empty() {
-        return Err(syn::Error::new(
+        return Err(Error::new(
             input.ident.span(),
             "#[derive(PyEnum)] requires at least one variant",
         ));
@@ -132,13 +134,13 @@ fn parse(input: DeriveInput) -> Result<DeriveSpec> {
     })
 }
 
-fn parse_variant(variant: syn::Variant) -> Result<VariantSpec> {
+fn parse_variant(variant: Variant) -> Result<VariantSpec> {
     let span = variant.span();
 
     match variant.fields {
         Fields::Unit => {}
         Fields::Unnamed(_) | Fields::Named(_) => {
-            return Err(syn::Error::new(
+            return Err(Error::new(
                 variant.ident.span(),
                 format!(
                     "variant `{}` has fields; Python enum members must be \
@@ -149,9 +151,22 @@ fn parse_variant(variant: syn::Variant) -> Result<VariantSpec> {
         }
     }
 
-    let value = match variant.discriminant {
-        None => VariantValue::Auto,
-        Some((_, expr)) => literal_from_expr(&expr, &variant.ident)?,
+    let explicit_str = parse_variant_attr(&variant.attrs, &variant.ident)?;
+
+    let value = match (explicit_str, variant.discriminant) {
+        (Some(_), Some((_, expr))) => {
+            return Err(Error::new(
+                expr.span(),
+                format!(
+                    "variant `{}` has both an `#[pyenum(value = ...)]` \
+                     attribute and a Rust discriminant; specify only one",
+                    variant.ident
+                ),
+            ));
+        }
+        (Some(s), None) => VariantValue::Str(s),
+        (None, None) => VariantValue::Auto,
+        (None, Some((_, expr))) => literal_from_expr(&expr, &variant.ident)?,
     };
 
     Ok(VariantSpec {
@@ -161,13 +176,46 @@ fn parse_variant(variant: syn::Variant) -> Result<VariantSpec> {
     })
 }
 
+fn parse_variant_attr(attrs: &[Attribute], variant_ident: &Ident) -> Result<Option<String>> {
+    let mut value: Option<String> = None;
+
+    for attr in attrs {
+        if !attr.path().is_ident("pyenum") {
+            continue;
+        }
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("value") {
+                if value.is_some() {
+                    return Err(meta.error(format!(
+                        "duplicate `value` in #[pyenum(...)] on variant `{variant_ident}`"
+                    )));
+                }
+                let lit: LitStr = meta.value()?.parse()?;
+                value = Some(lit.value());
+                return Ok(());
+            }
+            let key = meta
+                .path
+                .get_ident()
+                .map(|i| i.to_string())
+                .unwrap_or_else(|| "(unknown)".to_string());
+            Err(meta.error(format!(
+                "unknown key `{key}` in #[pyenum(...)] on variant \
+                 `{variant_ident}`; expected: value"
+            )))
+        })?;
+    }
+
+    Ok(value)
+}
+
 fn literal_from_expr(expr: &Expr, variant_ident: &Ident) -> Result<VariantValue> {
     match expr {
         Expr::Lit(ExprLit {
             lit: Lit::Int(int), ..
         }) => parse_int_literal(int),
-        Expr::Unary(syn::ExprUnary {
-            op: syn::UnOp::Neg(_),
+        Expr::Unary(ExprUnary {
+            op: UnOp::Neg(_),
             expr: inner,
             ..
         }) => {
@@ -180,7 +228,7 @@ fn literal_from_expr(expr: &Expr, variant_ident: &Ident) -> Result<VariantValue>
                     return Ok(VariantValue::Int(-v));
                 }
             }
-            Err(syn::Error::new(
+            Err(Error::new(
                 expr.span(),
                 format!(
                     "variant `{variant_ident}` has an unsupported \
@@ -189,7 +237,7 @@ fn literal_from_expr(expr: &Expr, variant_ident: &Ident) -> Result<VariantValue>
                 ),
             ))
         }
-        _ => Err(syn::Error::new(
+        _ => Err(Error::new(
             expr.span(),
             format!(
                 "variant `{variant_ident}` has an unsupported discriminant \
@@ -202,15 +250,12 @@ fn literal_from_expr(expr: &Expr, variant_ident: &Ident) -> Result<VariantValue>
 fn parse_int_literal(int: &LitInt) -> Result<VariantValue> {
     int.base10_parse::<i64>()
         .map(VariantValue::Int)
-        .map_err(|e| syn::Error::new(int.span(), format!("invalid integer literal: {e}")))
+        .map_err(|e| Error::new(int.span(), format!("invalid integer literal: {e}")))
 }
 
 /// Walk `#[pyenum(...)]` attributes and extract the base selector + python
 /// name override. Unknown keys and duplicate keys are rejected here.
-fn parse_pyenum_attr(
-    attrs: &[syn::Attribute],
-    enum_ident: &Ident,
-) -> Result<(String, BaseSelector)> {
+fn parse_pyenum_attr(attrs: &[Attribute], enum_ident: &Ident) -> Result<(String, BaseSelector)> {
     let mut base: Option<BaseSelector> = None;
     let mut python_name: Option<String> = None;
 

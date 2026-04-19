@@ -1,0 +1,5 @@
+error: variant `Tupled` has fields; Python enum members must be unit variants
+ --> tests/ui/fail/tuple_variant.rs:6:5
+  |
+6 |     Tupled(u8),
+  |     ^^^^^^

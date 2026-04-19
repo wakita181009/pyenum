@@ -1,0 +1,5 @@
+error: variant `Ok` has an integer discriminant but the enum base is `StrEnum`, which requires string values (use `#[pyenum(value = "...")]` or omit the discriminant for auto-lowercased names)
+ --> tests/ui/fail/strenum_int_discriminant.rs:6:5
+  |
+6 |     Ok = 1,
+  |     ^^

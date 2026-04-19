@@ -1,0 +1,5 @@
+error: variant `Crimson` has value `"red"`, which was already used by `Red`; Python would make the second variant an alias of the first and break Rust-side round-trip identity
+ --> tests/ui/fail/duplicate_str_value.rs:9:5
+  |
+9 |     Crimson,
+  |     ^^^^^^^

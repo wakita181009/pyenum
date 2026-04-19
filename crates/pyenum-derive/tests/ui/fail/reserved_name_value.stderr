@@ -1,0 +1,13 @@
+error: variant `value` collides with an `enum`-reserved member name; rename the Rust variant (future `#[pyenum(rename = "...")]` may offer an opt-out path)
+ --> tests/ui/fail/reserved_name_value.rs:6:5
+  |
+6 |     value,
+  |     ^^^^^
+
+warning: variant `value` should have an upper camel case name
+ --> tests/ui/fail/reserved_name_value.rs:6:5
+  |
+6 |     value,
+  |     ^^^^^ help: convert the identifier to upper camel case (notice the capitalization): `Value`
+  |
+  = note: `#[warn(non_camel_case_types)]` (part of `#[warn(nonstandard_style)]`) on by default

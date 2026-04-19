@@ -1,0 +1,5 @@
+error: #[derive(PyEnum)] cannot be applied to a generic or lifetime-parameterised enum
+ --> tests/ui/fail/lifetime_enum.rs:4:13
+  |
+4 | pub enum Bad<'a> {
+  |             ^

@@ -136,6 +136,25 @@ assert Role.ADMIN + "/panel" == "admin/panel"
 assert Permission.READ | Permission.WRITE in Permission
 ```
 
+### `StrEnum` values
+
+`StrEnum` variants without an explicit `#[pyenum(value = "...")]` defer to
+Python's `enum.auto()`, which — per the `StrEnum` contract introduced in
+Python 3.11 — **lowercases the variant name**:
+
+```rust
+#[derive(Clone, Copy, PyEnum)]
+#[pyenum(base = "StrEnum")]
+pub enum Greeting {
+    Hello,                     // Greeting.HELLO.value == "hello"
+    #[pyenum(value = "Bye")]
+    Bye,                       // Greeting.BYE.value   == "Bye"
+}
+```
+
+Attach an explicit `value` whenever you need to preserve case or pick a
+label that differs from the variant identifier.
+
 ---
 
 ## Compatibility
@@ -167,10 +186,15 @@ these fails the build with a variant-level diagnostic:
 - Tuple-struct or struct variants (`Variant(u8)`, `Variant { x: u8 }`)
 - Generics or lifetime parameters
 - Zero-variant enums
-- Explicit values incompatible with the chosen base (e.g. non-integer for
-  `IntEnum`)
-- Name collisions with Python dunder names
-- Duplicate explicit values outside of the documented aliasing rules
+- Base/value mismatches: integer discriminants on `StrEnum`, string
+  `#[pyenum(value = "...")]` on `IntEnum` / `Flag` / `IntFlag`
+- Both a Rust discriminant **and** `#[pyenum(value = "...")]` on the
+  same variant
+- Name collisions with Python dunder names or `enum`-reserved members
+- Duplicate Python values across variants — including `StrEnum` auto
+  collisions where two Rust variant names lowercase to the same string.
+  The library refuses to create Python-side aliases because they would
+  break Rust-side round-trip identity
 
 Every case is covered by a `trybuild` snapshot test.
 
