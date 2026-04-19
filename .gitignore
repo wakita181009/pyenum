@@ -1,0 +1,73 @@
+# Rust
+/target
+**/target/
+*.rs.bk
+*.pdb
+# Library crate: Cargo.lock is intentionally ignored so downstream resolvers pick versions.
+Cargo.lock
+
+# Rust coverage / profiling
+*.profraw
+*.profdata
+lcov.info
+tarpaulin-report.*
+coverage/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pytype/
+.pyre/
+
+# Python virtualenvs
+.venv/
+venv/
+env/
+.env
+.python-version
+
+# Python packaging / build artifacts
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# maturin / PyO3 native extension outputs
+*.so
+*.pyd
+*.dylib
+!**/tests/**/*.so
+!**/tests/**/*.pyd
+!**/tests/**/*.dylib
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code (local-only settings)
+.claude/settings.local.json
+
+# Spec Kit runtime state (kept out of the repo)
+.specify/cache/
+
+# Logs / scratch
+*.log
+.scratch/
