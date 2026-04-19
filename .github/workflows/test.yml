@@ -79,13 +79,16 @@ jobs:
         run: uv run pytest -q
 
   coverage:
-    name: coverage (cargo-llvm-cov)
+    name: coverage (cargo-llvm-cov + pytest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: install python
+        run: uv python install 3.13
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
@@ -93,8 +96,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: coverage
-      - name: llvm-cov
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      - name: create venv & install test deps
+        run: |
+          uv venv --python 3.13
+          uv pip install maturin pytest pydantic fastapi sqlalchemy
+      - name: llvm-cov (Rust + Python)
+        run: bash scripts/coverage.sh --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v6
         with:
           files: lcov.info

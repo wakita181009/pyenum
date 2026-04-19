@@ -296,3 +296,266 @@ fn parse_pyenum_attr(attrs: &[Attribute], enum_ident: &Ident) -> Result<(String,
         base.unwrap_or(BaseSelector::Enum),
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quote::quote;
+
+    fn parse_err(input: TokenStream) -> String {
+        match parse_derive_input(input) {
+            Ok(_) => panic!("expected parse error"),
+            Err(e) => e.to_string(),
+        }
+    }
+
+    fn parse_ok(input: TokenStream) -> DeriveSpec {
+        match parse_derive_input(input) {
+            Ok(spec) => spec,
+            Err(e) => panic!("expected successful parse: {e}"),
+        }
+    }
+
+    #[test]
+    fn rejects_struct() {
+        let msg = parse_err(quote! {
+            struct NotAnEnum { field: i32 }
+        });
+        assert!(msg.contains("can only be applied to enums, not structs"));
+    }
+
+    #[test]
+    fn rejects_union() {
+        let msg = parse_err(quote! {
+            union NotAnEnum { a: u32, b: u32 }
+        });
+        assert!(msg.contains("can only be applied to enums, not unions"));
+    }
+
+    #[test]
+    fn rejects_generic_enum() {
+        let msg = parse_err(quote! {
+            enum Color<T> { Red(T), Green, Blue }
+        });
+        assert!(msg.contains("generic or lifetime-parameterised enum"));
+    }
+
+    #[test]
+    fn rejects_empty_enum() {
+        let msg = parse_err(quote! {
+            enum Nothing {}
+        });
+        assert!(msg.contains("requires at least one variant"));
+    }
+
+    #[test]
+    fn rejects_tuple_variant() {
+        let msg = parse_err(quote! {
+            enum Color { Red, Rgb(u8, u8, u8) }
+        });
+        assert!(msg.contains("has fields"));
+    }
+
+    #[test]
+    fn rejects_struct_variant() {
+        let msg = parse_err(quote! {
+            enum Color { Red, Rgb { r: u8, g: u8, b: u8 } }
+        });
+        assert!(msg.contains("has fields"));
+    }
+
+    #[test]
+    fn rejects_unknown_top_level_key() {
+        let msg = parse_err(quote! {
+            #[pyenum(unknown = "x")]
+            enum Color { Red, Green }
+        });
+        assert!(msg.contains("unknown key `unknown`"));
+    }
+
+    #[test]
+    fn rejects_unknown_base() {
+        let msg = parse_err(quote! {
+            #[pyenum(base = "Bogus")]
+            enum Color { Red, Green }
+        });
+        assert!(msg.contains("unknown pyenum base `Bogus`"));
+    }
+
+    #[test]
+    fn rejects_duplicate_base() {
+        let msg = parse_err(quote! {
+            #[pyenum(base = "Enum", base = "IntEnum")]
+            enum Color { Red, Green }
+        });
+        assert!(msg.contains("duplicate `base`"));
+    }
+
+    #[test]
+    fn rejects_duplicate_name() {
+        let msg = parse_err(quote! {
+            #[pyenum(name = "A", name = "B")]
+            enum Color { Red, Green }
+        });
+        assert!(msg.contains("duplicate `name`"));
+    }
+
+    #[test]
+    fn accepts_name_override() {
+        let spec = parse_ok(quote! {
+            #[pyenum(name = "MyColor")]
+            enum Color { Red, Green }
+        });
+        assert_eq!(spec.python_name, "MyColor");
+        assert_eq!(spec.base, BaseSelector::Enum);
+    }
+
+    #[test]
+    fn accepts_all_base_selectors() {
+        for (literal, expected) in [
+            ("Enum", BaseSelector::Enum),
+            ("IntEnum", BaseSelector::IntEnum),
+            ("StrEnum", BaseSelector::StrEnum),
+            ("Flag", BaseSelector::Flag),
+            ("IntFlag", BaseSelector::IntFlag),
+        ] {
+            let lit_ts: TokenStream = format!("#[pyenum(base = \"{literal}\")] enum E {{ A }}")
+                .parse()
+                .unwrap();
+            let spec = parse_ok(lit_ts);
+            assert_eq!(spec.base, expected, "for literal {literal}");
+        }
+    }
+
+    #[test]
+    fn accepts_negative_discriminant() {
+        let spec = parse_ok(quote! {
+            #[pyenum(base = "IntEnum")]
+            enum Signed { Low = -5, Zero = 0, High = 5 }
+        });
+        let values: Vec<_> = spec
+            .variants
+            .iter()
+            .map(|v| match &v.value {
+                VariantValue::Int(i) => *i,
+                _ => panic!("expected Int"),
+            })
+            .collect();
+        assert_eq!(values, vec![-5, 0, 5]);
+    }
+
+    #[test]
+    fn rejects_non_literal_discriminant() {
+        let msg = parse_err(quote! {
+            enum Math { Pi = 3 + 1 }
+        });
+        assert!(msg.contains("unsupported discriminant expression"));
+    }
+
+    #[test]
+    fn rejects_negative_non_literal_discriminant() {
+        let msg = parse_err(quote! {
+            enum Math { X = -foo }
+        });
+        assert!(msg.contains("unsupported discriminant expression"));
+    }
+
+    #[test]
+    fn rejects_oversized_integer_literal() {
+        let msg = parse_err(quote! {
+            enum Big { Huge = 99999999999999999999999 }
+        });
+        assert!(msg.contains("invalid integer literal"));
+    }
+
+    #[test]
+    fn rejects_value_and_discriminant() {
+        let msg = parse_err(quote! {
+            enum Mixed {
+                #[pyenum(value = "red")]
+                Red = 1,
+            }
+        });
+        assert!(msg.contains("both an `#[pyenum(value = ...)]` attribute and a Rust discriminant"));
+    }
+
+    #[test]
+    fn rejects_duplicate_variant_value() {
+        let msg = parse_err(quote! {
+            enum Dup {
+                #[pyenum(value = "a", value = "b")]
+                X,
+            }
+        });
+        assert!(msg.contains("duplicate `value`"));
+    }
+
+    #[test]
+    fn rejects_unknown_variant_key() {
+        let msg = parse_err(quote! {
+            enum Bad {
+                #[pyenum(bogus = "x")]
+                X,
+            }
+        });
+        assert!(msg.contains("unknown key `bogus`"));
+    }
+
+    #[test]
+    fn skips_non_pyenum_attrs_on_enum_and_variant() {
+        let spec = parse_ok(quote! {
+            #[derive(Debug)]
+            #[some_other_attr]
+            enum Color {
+                #[serde(rename = "red")]
+                Red,
+                Green,
+            }
+        });
+        assert_eq!(spec.variants.len(), 2);
+    }
+
+    #[test]
+    fn variant_value_auto_by_default() {
+        let spec = parse_ok(quote! {
+            enum Color { Red, Green }
+        });
+        for v in &spec.variants {
+            assert!(matches!(v.value, VariantValue::Auto));
+        }
+    }
+
+    #[test]
+    fn variant_value_str_from_attr() {
+        let spec = parse_ok(quote! {
+            #[pyenum(base = "StrEnum")]
+            enum Color {
+                #[pyenum(value = "crimson")]
+                Red,
+                Green,
+            }
+        });
+        match &spec.variants[0].value {
+            VariantValue::Str(s) => assert_eq!(s, "crimson"),
+            other => panic!("expected Str, got {other:?}"),
+        }
+        assert!(matches!(spec.variants[1].value, VariantValue::Auto));
+    }
+
+    #[test]
+    fn base_selector_tokens_are_distinct() {
+        let all = [
+            BaseSelector::Enum,
+            BaseSelector::IntEnum,
+            BaseSelector::StrEnum,
+            BaseSelector::Flag,
+            BaseSelector::IntFlag,
+        ];
+        let rendered: Vec<String> = all.iter().map(|b| b.tokens().to_string()).collect();
+        for (i, a) in rendered.iter().enumerate() {
+            for b in rendered.iter().skip(i + 1) {
+                assert_ne!(a, b);
+            }
+        }
+    }
+}

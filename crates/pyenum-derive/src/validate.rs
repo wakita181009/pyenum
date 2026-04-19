@@ -168,3 +168,173 @@ fn base_display(base: BaseSelector) -> &'static str {
         BaseSelector::IntFlag => "IntFlag",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parse::{DeriveSpec, VariantSpec, VariantValue};
+    use proc_macro2::Span;
+    use syn::Ident;
+
+    fn ident(name: &str) -> Ident {
+        Ident::new(name, Span::call_site())
+    }
+
+    fn run_err(s: DeriveSpec) -> String {
+        match run(s) {
+            Ok(_) => panic!("expected validation error"),
+            Err(e) => e.to_string(),
+        }
+    }
+
+    fn spec(base: BaseSelector, variants: Vec<(&str, VariantValue)>) -> DeriveSpec {
+        DeriveSpec {
+            rust_ident: ident("TestEnum"),
+            python_name: "TestEnum".to_string(),
+            base,
+            variants: variants
+                .into_iter()
+                .map(|(name, value)| VariantSpec {
+                    rust_ident: ident(name),
+                    value,
+                    span: Span::call_site(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn rejects_python_keyword_variant() {
+        // `class` is a Python keyword.
+        let s = spec(BaseSelector::Enum, vec![("class", VariantValue::Auto)]);
+        let err = run_err(s);
+        assert!(err.contains("collides with a Python keyword"), "{err}");
+    }
+
+    #[test]
+    fn rejects_enum_reserved_member_variant() {
+        // `name` is reserved by `enum.Enum`.
+        let s = spec(BaseSelector::Enum, vec![("name", VariantValue::Auto)]);
+        let err = run_err(s);
+        assert!(
+            err.contains("collides with an `enum`-reserved member name"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn rejects_enum_special_method_variant() {
+        // `__init__` is an enum special method.
+        let s = spec(BaseSelector::Enum, vec![("__init__", VariantValue::Auto)]);
+        let err = run_err(s);
+        assert!(
+            err.contains("collides with an `enum` special method name"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_int_discriminants() {
+        // Rust itself rejects duplicate discriminants at the surface level,
+        // but the validator is defense-in-depth — invoke it directly.
+        let s = spec(
+            BaseSelector::IntEnum,
+            vec![("A", VariantValue::Int(1)), ("B", VariantValue::Int(1))],
+        );
+        let err = run_err(s);
+        assert!(err.contains("already used by `A`"), "{err}");
+        assert!(err.contains("alias"), "{err}");
+    }
+
+    #[test]
+    fn rejects_duplicate_str_values() {
+        let s = spec(
+            BaseSelector::StrEnum,
+            vec![
+                ("A", VariantValue::Str("red".into())),
+                ("B", VariantValue::Str("red".into())),
+            ],
+        );
+        let err = run_err(s);
+        assert!(err.contains("already used by `A`"), "{err}");
+    }
+
+    #[test]
+    fn str_value_on_intenum_is_rejected() {
+        let s = spec(
+            BaseSelector::IntEnum,
+            vec![("A", VariantValue::Str("x".into()))],
+        );
+        let err = run_err(s);
+        assert!(err.contains("IntEnum"), "{err}");
+        assert!(err.contains("requires integer values"), "{err}");
+    }
+
+    #[test]
+    fn str_value_on_flag_is_rejected() {
+        let s = spec(
+            BaseSelector::Flag,
+            vec![("A", VariantValue::Str("x".into()))],
+        );
+        let err = run_err(s);
+        assert!(err.contains("Flag"), "{err}");
+    }
+
+    #[test]
+    fn str_value_on_intflag_is_rejected() {
+        let s = spec(
+            BaseSelector::IntFlag,
+            vec![("A", VariantValue::Str("x".into()))],
+        );
+        let err = run_err(s);
+        assert!(err.contains("IntFlag"), "{err}");
+    }
+
+    #[test]
+    fn int_discriminant_on_strenum_is_rejected() {
+        let s = spec(BaseSelector::StrEnum, vec![("A", VariantValue::Int(1))]);
+        let err = run_err(s);
+        assert!(err.contains("StrEnum"), "{err}");
+    }
+
+    #[test]
+    fn auto_strenum_collides_with_lowercased_peer() {
+        // `RED` auto-lowercases to `"red"`, collides with explicit value.
+        let s = spec(
+            BaseSelector::StrEnum,
+            vec![
+                ("red", VariantValue::Str("red".into())),
+                ("RED", VariantValue::Auto),
+            ],
+        );
+        let err = run_err(s);
+        assert!(err.contains("auto-lowercases"), "{err}");
+    }
+
+    #[test]
+    fn accepts_well_formed_spec() {
+        let s = spec(
+            BaseSelector::IntEnum,
+            vec![
+                ("A", VariantValue::Int(1)),
+                ("B", VariantValue::Int(2)),
+                ("C", VariantValue::Auto),
+            ],
+        );
+        assert!(run(s).is_ok());
+    }
+
+    #[test]
+    fn base_display_covers_every_variant() {
+        for b in [
+            BaseSelector::Enum,
+            BaseSelector::IntEnum,
+            BaseSelector::StrEnum,
+            BaseSelector::Flag,
+            BaseSelector::IntFlag,
+        ] {
+            let name = base_display(b);
+            assert!(!name.is_empty());
+        }
+    }
+}
