@@ -1,3 +1,9 @@
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan:
+specs/001-pyenum-derive/plan.md
+<!-- SPECKIT END -->
+
 # pyenum
 
 A Rust library that lets PyO3 authors expose Rust `enum` types to Python as

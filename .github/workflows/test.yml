@@ -44,7 +44,7 @@ jobs:
           - { os: ubuntu-latest, python: "3.14", pyo3: "0_26" }
           - { os: ubuntu-latest, python: "3.14", pyo3: "0_27" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -66,7 +66,7 @@ jobs:
     name: trybuild (compile-fail)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -85,31 +85,36 @@ jobs:
         python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         pyo3: ["0_25", "0_26", "0_27", "0_28"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: ${{ matrix.python }}
-          allow-prereleases: true
+          enable-cache: true
+          cache-dependency-glob: "python/**/pyproject.toml"
+      - name: install python
+        run: uv python install ${{ matrix.python }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           key: pyintegration-py${{ matrix.python }}-pyo3-${{ matrix.pyo3 }}
-      - name: install maturin & test deps
-        run: pip install maturin pytest pydantic fastapi sqlalchemy
+      - name: create venv & install test deps
+        working-directory: python
+        run: |
+          uv venv --python ${{ matrix.python }}
+          uv pip install maturin pytest pydantic fastapi sqlalchemy
       - name: build & install extension
         working-directory: python
         run: >-
-          maturin develop --release
+          uv run maturin develop --release
           --features pyo3-${{ matrix.pyo3 }}
       - name: pytest
         working-directory: python
-        run: pytest -q
+        run: uv run pytest -q
 
   coverage:
     name: coverage (cargo-llvm-cov)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -125,7 +130,7 @@ jobs:
           cargo llvm-cov --workspace
           --no-default-features --features pyo3-0_28
           --lcov --output-path lcov.info
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         with:
           files: lcov.info
           fail_ci_if_error: false

@@ -18,7 +18,7 @@ jobs:
     name: cargo fmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -32,7 +32,7 @@ jobs:
       matrix:
         pyo3: ["0_25", "0_26", "0_27", "0_28"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -53,7 +53,7 @@ jobs:
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -65,11 +65,10 @@ jobs:
     name: python lint (ruff)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
-      - name: install ruff
-        run: pip install ruff
-      - run: ruff check python
-      - run: ruff format --check python
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uvx ruff check python
+      - run: uvx ruff format --check python
