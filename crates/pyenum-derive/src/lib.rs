@@ -13,7 +13,7 @@ mod parse;
 mod reserved;
 mod validate;
 
-/// Derive a [`pyenum::PyEnum`] implementation for a unit-variant Rust enum.
+/// Derive a `pyenum::PyEnum` implementation for a unit-variant Rust enum.
 ///
 /// Enum-level attributes (all optional):
 ///

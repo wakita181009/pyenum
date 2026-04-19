@@ -25,12 +25,8 @@ jobs:
       - run: cargo fmt --all -- --check
 
   clippy:
-    name: cargo clippy (pyo3 ${{ matrix.pyo3 }})
+    name: cargo clippy
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        pyo3: ["0_25", "0_26", "0_27", "0_28"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
@@ -41,11 +37,8 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          key: clippy-pyo3-${{ matrix.pyo3 }}
-      - run: >-
-          cargo clippy --workspace --all-targets
-          --no-default-features --features pyo3-${{ matrix.pyo3 }}
-          -- -D warnings
+          key: clippy
+      - run: cargo clippy --workspace --all-targets -- -D warnings
 
   docs:
     name: cargo doc

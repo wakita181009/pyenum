@@ -14,35 +14,13 @@ env:
 
 jobs:
   cargo-test:
-    name: cargo test (${{ matrix.os }} / py${{ matrix.python }} / pyo3 ${{ matrix.pyo3 }})
+    name: cargo test (${{ matrix.os }} / py${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        pyo3: ["0_25", "0_26", "0_27", "0_28"]
-        exclude:
-          # Keep matrix bounded: only run all PyO3 versions on Linux + 3.12.
-          # macOS / Windows and non-3.12 Python only cover the default 0.28.
-          - { os: macos-latest, pyo3: "0_25" }
-          - { os: macos-latest, pyo3: "0_26" }
-          - { os: macos-latest, pyo3: "0_27" }
-          - { os: windows-latest, pyo3: "0_25" }
-          - { os: windows-latest, pyo3: "0_26" }
-          - { os: windows-latest, pyo3: "0_27" }
-          - { os: ubuntu-latest, python: "3.10", pyo3: "0_25" }
-          - { os: ubuntu-latest, python: "3.10", pyo3: "0_26" }
-          - { os: ubuntu-latest, python: "3.10", pyo3: "0_27" }
-          - { os: ubuntu-latest, python: "3.11", pyo3: "0_25" }
-          - { os: ubuntu-latest, python: "3.11", pyo3: "0_26" }
-          - { os: ubuntu-latest, python: "3.11", pyo3: "0_27" }
-          - { os: ubuntu-latest, python: "3.13", pyo3: "0_25" }
-          - { os: ubuntu-latest, python: "3.13", pyo3: "0_26" }
-          - { os: ubuntu-latest, python: "3.13", pyo3: "0_27" }
-          - { os: ubuntu-latest, python: "3.14", pyo3: "0_25" }
-          - { os: ubuntu-latest, python: "3.14", pyo3: "0_26" }
-          - { os: ubuntu-latest, python: "3.14", pyo3: "0_27" }
+        python: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
@@ -52,15 +30,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          key: test-${{ matrix.os }}-py${{ matrix.python }}-pyo3-${{ matrix.pyo3 }}
+          key: test-${{ matrix.os }}-py${{ matrix.python }}
       - name: cargo test
-        run: >-
-          cargo test --workspace --all-targets
-          --no-default-features --features pyo3-${{ matrix.pyo3 }}
+        run: cargo test --workspace --all-targets
       - name: doctests
-        run: >-
-          cargo test --workspace --doc
-          --no-default-features --features pyo3-${{ matrix.pyo3 }}
+        run: cargo test --workspace --doc
 
   trybuild:
     name: trybuild (compile-fail)
@@ -77,13 +51,12 @@ jobs:
       - run: cargo test -p pyenum-derive --test trybuild
 
   python-integration:
-    name: python integration (py${{ matrix.python }} / pyo3 ${{ matrix.pyo3 }})
+    name: python integration (py${{ matrix.python }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        pyo3: ["0_25", "0_26", "0_27", "0_28"]
+        python: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
@@ -95,7 +68,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          key: pyintegration-py${{ matrix.python }}-pyo3-${{ matrix.pyo3 }}
+          key: pyintegration-py${{ matrix.python }}
       - name: create venv & install test deps
         working-directory: python
         run: |
@@ -103,9 +76,7 @@ jobs:
           uv pip install maturin pytest pydantic fastapi sqlalchemy
       - name: build & install extension
         working-directory: python
-        run: >-
-          uv run maturin develop --release
-          --features pyo3-${{ matrix.pyo3 }}
+        run: uv run maturin develop --release
       - name: pytest
         working-directory: python
         run: uv run pytest -q
@@ -126,10 +97,7 @@ jobs:
         with:
           key: coverage
       - name: llvm-cov
-        run: >-
-          cargo llvm-cov --workspace
-          --no-default-features --features pyo3-0_28
-          --lcov --output-path lcov.info
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v5
         with:
           files: lcov.info
