@@ -34,7 +34,7 @@
 ## Notes
 
 - The user confirmed scope: all five Python enum base types, Python-spec conformance (non-conforming Rust enums error), and a derive-macro API surface.
-- PyO3 0.28 is pinned as an explicit assumption; earlier/later versions are out of scope for v1.
+- PyO3 version: v1 targets PyO3 **0.28 exclusively**. Earlier drafts proposed a 0.25–0.28 matrix; that was withdrawn after discovering cargo's `pyo3-ffi` `links = "python"` rule forbids multiple PyO3 versions in one graph (see spec Clarifications Q6).
 - Python 3.11+ assumed to avoid `StrEnum` polyfill complexity.
 - Method projection (Rust `impl` methods → Python enum methods) explicitly deferred from v1.
 - Items marked incomplete would require spec updates before `/speckit.clarify` or `/speckit.plan`. All items currently pass.

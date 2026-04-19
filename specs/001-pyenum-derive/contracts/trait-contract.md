@@ -80,7 +80,8 @@ pub enum VariantLiteral {
 
 ## Test obligations (this contract)
 
-- `pyenum/tests/unit/cache.rs`: instrument a counter around the first-call construction path; hammer concurrently via spawned threads holding the GIL; assert the counter is 1 at the end.
-- `pyenum/tests/unit/convert.rs`: assert that `x.to_py_member(py)?.is(py_enum_class.getattr(name)?)` is `True` for every variant of a test enum (each supported base).
-- `pyenum/tests/unit/from.rs`: assert `from_py_member` raises `TypeError` on foreign objects and returns the right variant on class members.
-- `pyenum/tests/unit/spec.rs`: doctest or unit test that `SPEC.variants.is_empty()` is never `true` for any accepted derive input (covered by trybuild negative tests for the empty-enum case).
+- `crates/pyenum/tests/cache.rs`: instrument a counter around the first-call construction path; hammer concurrently via spawned threads holding the GIL; assert the counter is 1 at the end.
+- `crates/pyenum/tests/convert.rs`: assert that `x.to_py_member(py)?.is(py_enum_class(py)?.getattr(name)?)` is `True` for every variant of a test enum (each supported base).
+- `crates/pyenum/tests/from_py.rs`: assert `from_py_member` raises `TypeError` on foreign objects and returns the right variant on class members.
+- `#[cfg(test)]` blocks inside `crates/pyenum/src/trait_def.rs`: static checks that `SPEC.variants` is non-empty for every fixture enum used elsewhere in the suite (the empty-enum case is itself covered at compile time by `crates/pyenum-derive/tests/ui/fail/`).
+- Python-side equivalents (end-to-end against the `pyenum-test` cdylib) are covered by `tests/test_cache.py` and `tests/test_conversion.py`.

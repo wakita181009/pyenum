@@ -24,8 +24,10 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.28", features = ["abi3-py311"] }
-pyenum = "1"
+pyenum = "0.1"
 ```
+
+`pyenum` v1 pins PyO3 0.28. Using a different PyO3 line with `pyenum` is unsupported and will fail to build — cargo's `pyo3-ffi` `links = "python"` rule prevents mixing PyO3 versions in a single graph.
 
 ## 2. Declare a Rust enum and derive `PyEnum`
 

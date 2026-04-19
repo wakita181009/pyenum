@@ -17,24 +17,26 @@ Every decision below closes a `NEEDS CLARIFICATION` slot in Technical Context, a
 
 ## R2 — Per-interpreter cache primitive
 
-- **Decision**: Use `pyo3::sync::GILOnceCell<Py<PyType>>` as the sole cache primitive. Each `#[derive(PyEnum)]`-emitted `impl PyEnum for MyEnum` owns a `static CACHE: GILOnceCell<Py<PyType>> = GILOnceCell::new();` (inside a `fn py_enum_class<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyType>>` associated method). First call initialises via R1's construction path under the GIL; all subsequent calls return the cached reference.
-- **Rationale**: `GILOnceCell` exists explicitly for this pattern in PyO3 ≥ 0.19 and remains present in 0.28. It handles the "first thread wins, everyone else blocks and then reads" contract under the GIL without the caller writing `Mutex`/`OnceLock` glue. The cell is keyed *by location* (per `static`), which gives us free per-interpreter freshness in the single-interpreter case and correct semantics in the sub-interpreter case because PyO3 0.28's `GILOnceCell` is interpreter-aware.
+- **Decision**: Use `pyo3::sync::PyOnceLock<Py<PyType>>` as the sole cache primitive. Each `#[derive(PyEnum)]`-emitted `impl PyEnum for MyEnum` owns a `static CACHE: PyOnceLock<Py<PyType>> = PyOnceLock::new();` inside its `py_enum_class` associated method. First call initialises via R1's construction path under the GIL; all subsequent calls return the cached reference.
+- **Rationale**: `PyOnceLock` is PyO3 0.28's successor to the now-deprecated `GILOnceCell`; it is the canonical "initialise once per interpreter, serialised under the GIL" primitive for the 0.28 line. The cell is keyed *by location* (per `static`), giving free per-interpreter freshness.
 - **Alternatives rejected**:
+  - *`pyo3::sync::GILOnceCell`* — still technically available on 0.28 but deprecated; tracks PyO3's own deprecation schedule and migrates us off cleanly.
   - *`std::sync::OnceLock<Py<PyType>>`* — not interpreter-aware; holding a `Py<…>` across sub-interpreter finalisation is a use-after-free risk.
-  - *Global `HashMap<TypeId, Py<PyType>>` behind a `Mutex`* — an extra hash lookup on the hot path and a shared lock contention point across unrelated enums.
-  - *`lazy_static!` / `once_cell::sync::Lazy`* — cannot initialise under the GIL safely; initialisation can happen on any thread.
+  - *Global `HashMap<TypeId, Py<PyType>>` behind a `Mutex`* — extra hash lookup on the hot path; shared lock contention across unrelated enums.
 
 ## R3 — PyO3 0.28 conversion trait surface
 
-- **Decision**: Implement **`IntoPyObject`** (for `T` and `&T`) and **`FromPyObject`** for every type that derives `PyEnum`. Emission happens from the proc-macro so users never see the boilerplate. `IntoPyObject::Target = PyAny`; `IntoPyObject::Error = PyErr`.
-- **Rationale**: PyO3 0.28 replaced the deprecated `ToPyObject` / `IntoPy` pair with `IntoPyObject`/`IntoPyObjectRef` as the canonical one-way conversion trait; `FromPyObject` remains unchanged. Implementing both directions covers every signature position where the enum can appear (arguments, return values, `#[pyclass]` fields, iteration, setitem). Because we always convert to/from a `Py<PyType>` retrieved from R2's cache, the conversion is O(1) after first use.
+- **Decision**: For each derived enum, emit:
+  - `impl<'py> IntoPyObject<'py> for T` and `impl<'py> IntoPyObject<'py> for &T`, both with `type Target = PyAny`, `type Output = Bound<'py, PyAny>`, `type Error = PyErr`, delegating to `PyEnum::to_py_member`.
+  - `impl<'a, 'py> FromPyObject<'a, 'py> for T` with `type Error = PyErr` and `fn extract(obj: Borrowed<'a, 'py, PyAny>)`, delegating to `PyEnum::from_py_member`.
+- **Rationale**: PyO3 0.28's `FromPyObject` carries two lifetimes (`'a` for the borrow, `'py` for the Python thread token) and uses `Borrowed` rather than `&Bound`. `IntoPyObject` remains single-lifetime. Both impls go through a cached class retrieved from R2, so conversion is O(1) after first use. Both directions together cover every signature position (arguments, return values, `#[pyclass]` fields, iteration, `setitem`).
 - **Alternatives rejected**:
-  - *Only derive `IntoPyObject`, let users call `MyEnum::extract(obj)` manually* — defeats FR-006's "no manual conversion code" requirement.
-  - *Implement deprecated `ToPyObject`/`IntoPy`* — warns on 0.28, scheduled for removal; ties us to the wrong trait surface for the stated baseline.
+  - *Only derive the output direction, leave extraction to users* — defeats FR-006's "no manual conversion code" requirement.
+  - *Multi-version feature matrix (`pyo3-0_25 .. pyo3-0_28`)* — drafted and withdrawn after discovering cargo's `pyo3-ffi` `links = "python"` constraint makes it impossible to have multiple PyO3 lines in the same dependency graph, even as mutually exclusive optional deps. See Clarification Q6 in spec.md.
 
 ## R4 — Registration helper shape
 
-- **Decision**: Provide both (a) a free function `pub fn add_enum<T: PyEnum>(m: &Bound<'_, PyModule>) -> PyResult<()>` and (b) a blanket-impl extension trait `PyModuleExt` in `pyenum::prelude` giving `m.add_enum::<T>()?`. Both delegate to the same logic: resolve the cached `Py<PyType>` via `T::py_enum_class(py)`, then `m.add(T::NAME, class)?`.
+- **Decision**: Provide both (a) a free function `pub fn add_enum<T: PyEnum>(m: &Bound<'_, PyModule>) -> PyResult<()>` and (b) a blanket-impl extension trait `PyModuleExt` giving `m.add_enum::<T>()?`. Both delegate to the same logic: resolve the cached class via `T::py_enum_class(py)`, then `m.add(T::SPEC.name, class)?`.
 - **Rationale**: Matches Q4 clarification verbatim. The free function is the unambiguous canonical form for generated code and docs; the extension trait is the ergonomic form users reach for inside `#[pymodule]`. Keeping logic in one place avoids drift.
 - **Alternatives rejected**:
   - *Auto-registration via `inventory`/`linkme`/`ctor`* — explicitly rejected in Q4 for hidden-global / ordering reasons.
@@ -42,8 +44,8 @@ Every decision below closes a `NEEDS CLARIFICATION` slot in Technical Context, a
 
 ## R5 — Proc-macro parsing and validation
 
-- **Decision**: Parse with `syn::DeriveInput` + `syn::Data::Enum`. For each variant, require `Fields::Unit`. Extract optional discriminant via `Variant::discriminant`; only accept `ExprLit` (integer for int-valued bases, string for `StrEnum`); reject arbitrary `const`/`call` expressions (keep v1 scope bounded). Attribute `#[pyenum(base = "IntEnum", name = "PublicName")]` parsed with `syn::meta::ParseNestedMeta`. Reserved-name set (Q5) stored in `pyenum-derive/src/reserved.rs` as a sorted `&[&str]` scanned via binary search per variant.
-- **Rationale**: `syn 2` is the standard and matches PyO3 0.28's own proc-macro expectations. Rejecting expression discriminants for v1 keeps validation deterministic; spec FR-012 only requires *explicit values* be honoured, not arbitrary expressions. Binary-searching the reserved set is O(log n) per variant, trivial even at 1,024 variants.
+- **Decision**: Parse with `syn::DeriveInput` + `syn::Data::Enum`. For each variant, require `Fields::Unit`. Extract optional discriminant via `Variant::discriminant`; only accept `ExprLit` (integer literals — string literals deferred to v1.1); reject arbitrary `const`/`call` expressions. Attribute `#[pyenum(base = "IntEnum", name = "PublicName")]` parsed with `syn::meta::ParseNestedMeta`. Reserved-name set stored in `crates/pyenum-derive/src/reserved.rs` as a sorted `&[&str]` scanned via binary search per variant.
+- **Rationale**: `syn 2` is the standard and matches the proc-macro conventions used by every PyO3 version in the 0.25 – 0.28 support matrix. Rejecting expression discriminants for v1 keeps validation deterministic; spec FR-012 only requires *explicit values* be honoured, not arbitrary expressions. Binary-searching the reserved set is O(log n) per variant, trivial even at 1,024 variants.
 - **Alternatives rejected**:
   - *Accept any `Expr` discriminant and evaluate at runtime* — expands both the failure surface and the acceptance test matrix; not required by spec.
   - *`darling` for attribute parsing* — extra dependency for a derive that takes one-to-two attribute keys; not worth the dep.
@@ -79,7 +81,7 @@ Every decision below closes a `NEEDS CLARIFICATION` slot in Technical Context, a
 
 ## R9 — Trybuild snapshot strategy
 
-- **Decision**: `pyenum-derive/tests/ui/` split into `accept/` (files that must compile) and `fail/` (files that must fail to compile with the expected stderr captured in `*.stderr` snapshots). CI runs `cargo test --test ui` which invokes `trybuild`. Snapshots are regenerated explicitly via `TRYBUILD=overwrite cargo test --test ui` — never silently.
+- **Decision**: `crates/pyenum-derive/tests/ui/` split into `accept/` (files that must compile) and `fail/` (files that must fail to compile with the expected stderr captured in `*.stderr` snapshots). CI runs `cargo test --test ui` which invokes `trybuild`. Snapshots are regenerated explicitly via `TRYBUILD=overwrite cargo test --test ui` — never silently.
 - **Rationale**: Standard Rust proc-macro testing pattern. Keeps compile-fail fixtures close to the macro that produces the error and makes every reserved-name, base/value-mismatch, and non-unit-variant case an auditable file in source control.
 - **Alternatives rejected**:
   - *Inline `#[test]` with `compile_error!` expectations* — impossible; compile errors halt compilation of the test binary.
@@ -87,10 +89,11 @@ Every decision below closes a `NEEDS CLARIFICATION` slot in Technical Context, a
 
 ## R10 — Python integration-test harness
 
-- **Decision**: `tests/python/` is a cdylib PyO3 extension crate that depends on `pyenum` via path. `conftest.py` runs `maturin develop --manifest-path tests/python/Cargo.toml --quiet` during the pytest session-scope fixture, then imports `pyenum_test_ext`. The extension intentionally registers one enum per supported base plus edge cases (aliases, explicit zero-flag, mixed explicit/auto defaults).
-- **Rationale**: Produces real `isinstance(x, enum.Enum)` checks against a real import, which is the only way to verify FR-003 end-to-end. Session-scoped build amortises the cost across the whole suite. Having a single extension register every fixture enum keeps the test matrix sparse and easy to review.
+- **Decision**: Two-backend `backend` fixture. Python tests live in `python/tests/` and `conftest.py` yields `pyenum_ref` (always) and `pyenum_test_ext` (when the cdylib is available). The Rust backend is built from `crates/pyenum-test-ext/` via `maturin develop --manifest-path crates/pyenum-test-ext/Cargo.toml` during a session-scoped fixture; if `maturin` is unavailable or the build fails, that backend is marked `pytest.skip` and the reference backend still runs to completion. A single cdylib registers one derived enum per supported base plus the edge cases (aliases, explicit zero-flag, mixed explicit/auto defaults); the reference backend registers equivalent specs via `pyenum_ref.add_enum`.
+- **Rationale**: The dual-backend shape gives us a pure-Python TDD loop (no Rust toolchain needed to iterate on spec interpretation) *and* an end-to-end `isinstance(x, enum.Enum)` check against a real imported extension for the Rust side. Session-scoped build amortises the maturin cost across the whole suite. Skipping the Rust backend when unavailable means the reference tests double as a lightweight CI lane for early development.
 - **Alternatives rejected**:
-  - *Pure Rust PyO3 `Python::with_gil` tests that construct modules programmatically* — works, but doesn't exercise the `#[pymodule]` registration path (FR-010/FR-010a) which is a key contract.
+  - *Rust-only Python integration (no reference)* — loses the up-front executable spec and forces every test to wait on a maturin rebuild.
+  - *Reference-only Python tests (no Rust backend)* — loses end-to-end verification of FR-006/FR-010; we would not actually prove the derive wiring works from a real import.
   - *Separate extension per test file* — build-time blowup; no isolation benefit (process starts fresh anyway).
 
 ## R11 — Coverage tooling
@@ -103,10 +106,10 @@ Every decision below closes a `NEEDS CLARIFICATION` slot in Technical Context, a
 
 ## R12 — CI matrix & Rust MSRV
 
-- **Decision**: GitHub Actions job matrix: `{ os: [ubuntu-latest, macos-latest], python: [3.11, 3.12, 3.13], rust: [stable, 1.82 (MSRV)] }`. Windows not in v1 CI to keep the matrix tractable; users may build locally. MSRV pinned at `1.82` because edition 2024 requires `1.82+` and so does PyO3 0.28.
-- **Rationale**: Covers the three Python versions we support (3.11 floor per spec Assumptions), two platforms where PyO3 0.28 wheels are first-class, and both stable and MSRV Rust to catch accidental reliance on post-MSRV features.
+- **Decision**: GitHub Actions job matrix: `{ os: [ubuntu-latest, macos-latest, windows-latest], python: [3.10, 3.11, 3.12, 3.13, 3.14], rust: [stable] }`. The full Python × OS grid runs against PyO3 0.28 only. Rust workspace MSRV is pinned at `1.94` via `[workspace.package].rust-version`.
+- **Rationale**: Covers the five Python versions CPython currently supports (3.11 is the library's floor; 3.10 and earlier are exercised for import-time compatibility breakage), plus the three OSes PyO3 wheels target. Single PyO3 line keeps CI cheap.
 - **Alternatives rejected**:
-  - *Include `windows-latest` at v1* — low signal for a proc-macro crate; re-evaluate after v1 ships if users report issues.
+  - *Skip Windows CI* — the cost is low now that the pyo3 matrix has collapsed to one axis; keeping Windows green catches path-separator and ABI issues early.
   - *Track `nightly`* — not needed; we use no unstable features.
 
 ## Open Questions

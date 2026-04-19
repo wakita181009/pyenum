@@ -245,17 +245,17 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-**Purpose**: Close the remaining SC-004 (benchmarks), SC-006 (interop), SC-007 (docs) objectives; extend version matrix beyond `pyo3-0_28`; finalise CI + coverage gates.
+**Purpose**: Close the remaining SC-004 (benchmarks), SC-006 (interop), SC-007 (docs) objectives; finalise CI + coverage gates.
 
-### Cross-version matrix (lands the 0.25 / 0.26 / 0.27 branches inside `compat.rs`)
+> **Note**: Tasks T094–T100 were originally scoped to extend PyO3 support to the 0.25–0.27 lines behind a compatibility shim. They were **obsoleted** by the discovery that cargo's `pyo3-ffi` `links = "python"` rule rejects graphs containing more than one PyO3 line even when the alternates are mutually exclusive optional deps (see Clarification Q6 in spec.md). T094–T100 are intentionally left here as stricken-through placeholders for traceability; do NOT execute them.
 
-- [ ] T094 [RED] Re-run Phase 3–7 test suites under `--no-default-features --features pyo3-0_27`; document every cell that fails (expect most to pass, any divergence is a compat-shim gap) — artefact: a Markdown table in `specs/001-pyenum-derive/research.md` or a new `matrix-audit.md`
-- [ ] T095 [GREEN] Fill in `pyo3-0_27` branches inside `crates/pyenum/src/compat.rs` to close every gap surfaced by T094; rerun full suite
-- [ ] T096 [RED] Repeat T094 for `pyo3-0_26`
-- [ ] T097 [GREEN] Fill `pyo3-0_26` compat branches to close T096 gaps
-- [ ] T098 [RED] Repeat T094 for `pyo3-0_25`; expect meaningful divergence (conversion traits differ pre-`IntoPyObject`, `Bound<'py, T>` not yet canonical on module APIs)
-- [ ] T099 [GREEN] Fill `pyo3-0_25` compat branches in `crates/pyenum/src/compat.rs`: legacy `IntoPy`/`ToPyObject` instead of `IntoPyObject`, `&PyModule` vs `&Bound<PyModule>` for `ModuleArg`, older `GILOnceCell` path — pass every test cell
-- [ ] T100 [REFACTOR] Sweep `crates/pyenum/src/*.rs` and `crates/pyenum-derive/src/*.rs` with `rg "#\[cfg\(feature\s*=\s*\"pyo3-"` — the ONLY file with matches must be `crates/pyenum/src/compat.rs`; rerun full test matrix
+- [x] ~~T094 Re-run under `pyo3-0_27` — OBSOLETED (see note above)~~
+- [x] ~~T095 Fill `pyo3-0_27` compat branches — OBSOLETED~~
+- [x] ~~T096 Re-run under `pyo3-0_26` — OBSOLETED~~
+- [x] ~~T097 Fill `pyo3-0_26` compat branches — OBSOLETED~~
+- [x] ~~T098 Re-run under `pyo3-0_25` — OBSOLETED~~
+- [x] ~~T099 Fill `pyo3-0_25` compat branches — OBSOLETED~~
+- [x] ~~T100 Sweep for `cfg(feature = "pyo3-...")` — OBSOLETED~~
 
 ### Interop (SC-006)
 

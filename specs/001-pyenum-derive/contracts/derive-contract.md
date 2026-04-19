@@ -72,4 +72,4 @@ Applying the derive twice on the same type is a compile error (Rust's orphan/ove
 
 ## Test obligations (this contract)
 
-A compile-fail fixture + `.stderr` snapshot MUST exist for every row of the Rejects table, plus a compile-success fixture for every row-class of the Accepts contract. Added via `pyenum-derive/tests/ui/{accept,fail}/*.rs` and gated by `cargo test --test ui`.
+A compile-fail fixture + `.stderr` snapshot MUST exist for every row of the Rejects table, plus a compile-success fixture for every row-class of the Accepts contract. Added via `crates/pyenum-derive/tests/ui/{accept,fail}/*.rs` and gated by `cargo test --test ui`. The Python-side suite in `tests/` does not re-test these compile-time rejections (there is no pure-Python reference); the trybuild fixtures are the sole source of truth for rejection behavior.

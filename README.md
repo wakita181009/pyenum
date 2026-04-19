@@ -251,5 +251,4 @@ Targets from `spec.md` §SC-004, validated by the benchmark suite:
 
 ## License
 
-Dual-licensed under **MIT** or **Apache-2.0** at your option. See
-[`LICENSE-MIT`](LICENSE-MIT) and [`LICENSE-APACHE`](LICENSE-APACHE).
+MIT

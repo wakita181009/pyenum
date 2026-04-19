@@ -70,14 +70,14 @@ pub trait PyEnum: Sized + Copy + 'static {
 
     /// Returns the cached Python class object, constructing it (exactly once
     /// per interpreter) on first call.
-    fn py_enum_class<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyType>>;
+    fn py_enum_class(py: Python) -> PyResult<Bound<PyType>>;
 
     /// Returns the Python enum member corresponding to `self`.
     fn to_py_member<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>>;
 
     /// Extracts `Self` from a Python object that must be a member of the
     /// cached class. Raises `TypeError` otherwise.
-    fn from_py_member<'py>(obj: &Bound<'py, PyAny>) -> PyResult<Self>;
+    fn from_py_member(obj: &Bound<PyAny>) -> PyResult<Self>;
 }
 
 #[cfg(test)]

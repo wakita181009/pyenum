@@ -59,6 +59,6 @@ pyenum::add_enum::<crate::Permission>(&m)?;
 
 ## Test obligations (this contract)
 
-- `tests/python/conftest.py` + `tests/python/src/lib.rs`: the test extension registers one derived enum per supported `PyEnumBase` using both the free function and the extension method. Pytest fixtures import the module and assert each class is present and is a subclass of the expected base.
-- `tests/python/test_cache.py`: import the module, perform 10,000 conversions, and assert — via an instrumented module-level Python counter — that the Python class object identity is stable across calls. (The counter is set by a helper exposed from the test extension, not by `pyenum` itself.)
-- `tests/python/test_conversion.py`: exercises both directions of the conversion boundary from Python code calling `#[pyfunction]`s in the test extension.
+- `tests/conftest.py` + `crates/pyenum-test/src/lib.rs`: the cdylib fixture registers one derived enum per supported `PyEnumBase` using both the free function and the extension method. `tests/test_registration.py` imports `pyenum_test` and asserts each class is present and is a subclass of the expected Python base.
+- `tests/test_cache.py`: perform 10,000 conversions and assert — via an instrumented counter exposed by the cdylib — that the Python class object identity is stable across calls and construction happened exactly once.
+- `tests/test_conversion.py`: exercises both directions of the conversion boundary from Python code calling `#[pyfunction]`s in the test extension.
