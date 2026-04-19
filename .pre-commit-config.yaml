@@ -1,0 +1,66 @@
+# Pre-commit hooks for pyenum.
+#
+# Stages:
+#   - pre-commit (default): the full gate — runs on `git commit`.
+#   - manual: fast auto-fix subset — runs from Claude's PostToolUse hook via
+#     `pre-commit run --hook-stage manual --files <file>`.
+#
+# Install once per clone:
+#   uv tool install pre-commit
+#   pre-commit install
+
+default_stages: [pre-commit]
+fail_fast: false
+
+repos:
+  - repo: local
+    hooks:
+      # ── Fast auto-fix: runs in both stages ──────────────────────────────
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --
+        language: system
+        types: [rust]
+        files: ^crates/.*\.rs$
+        stages: [pre-commit, manual]
+
+      - id: ruff-format
+        name: ruff format
+        entry: uvx ruff format
+        language: system
+        types: [python]
+        files: ^tests/.*\.py$
+        stages: [pre-commit, manual]
+
+      - id: ruff-fix
+        name: ruff check --fix
+        entry: uvx ruff check --fix
+        language: system
+        types: [python]
+        files: ^tests/.*\.py$
+        stages: [pre-commit, manual]
+
+      # ── Heavy gate: commit-time only ────────────────────────────────────
+      - id: cargo-clippy
+        name: cargo clippy -D warnings
+        entry: cargo clippy --workspace --all-targets --quiet -- -D warnings
+        language: system
+        types: [rust]
+        files: ^crates/.*\.rs$
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff check (strict)
+        entry: uvx ruff check
+        language: system
+        types: [python]
+        files: ^tests/.*\.py$
+
+      - id: mypy
+        name: mypy
+        entry: uvx mypy
+        language: system
+        types: [python]
+        files: ^tests/.*\.py$
+        pass_filenames: false
+        args: [tests]

@@ -1,0 +1,25 @@
+[package]
+name = "pyenum-derive"
+description = "#[derive(PyEnum)] procedural macro for the `pyenum` crate."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords = ["pyo3", "python", "enum", "derive", "proc-macro"]
+categories = ["api-bindings", "rust-patterns"]
+
+[lib]
+name = "pyenum_derive"
+path = "src/lib.rs"
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
+
+[dev-dependencies]
+trybuild = { workspace = true }

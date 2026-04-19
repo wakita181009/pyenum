@@ -1,0 +1,21 @@
+[package]
+name = "pyenum"
+description = "Expose Rust enums to Python as real enum.Enum subclasses via PyO3."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+readme = "../../README.md"
+keywords = ["pyo3", "python", "enum", "derive", "ffi"]
+categories = ["api-bindings", "rust-patterns"]
+
+[lib]
+name = "pyenum"
+path = "src/lib.rs"
+
+[dependencies]
+pyenum-derive = { workspace = true }
+pyo3 = { version = "0.28", features = ["abi3-py311"] }

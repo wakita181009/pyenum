@@ -1,6 +1,23 @@
-[package]
-name = "pyenum"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "3"
+members = [
+    "crates/pyenum",
+    "crates/pyenum-derive",
+    "crates/pyenum-test",
+]
 
-[dependencies]
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.94"
+license = "MIT"
+repository = "https://github.com/wakita181009/pyenum"
+homepage = "https://github.com/wakita181009/pyenum"
+authors = ["wakita181009"]
+
+[workspace.dependencies]
+pyenum-derive = { path = "crates/pyenum-derive", version = "=0.0.1" }
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full", "extra-traits"] }
+trybuild = "1.0"

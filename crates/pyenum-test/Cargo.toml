@@ -1,0 +1,18 @@
+[package]
+name = "pyenum-test"
+description = "cdylib fixture for pyenum's Python integration test suite (workspace-only, not published)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[lib]
+name = "pyenum_test"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+pyenum = { path = "../pyenum" }
+pyo3 = { version = "0.28", features = ["extension-module", "abi3-py311"] }
