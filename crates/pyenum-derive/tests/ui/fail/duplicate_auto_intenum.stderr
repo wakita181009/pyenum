@@ -1,0 +1,5 @@
+error: variant `B` has discriminant `1`, which was already used by `A`; Python would make the second variant an alias of the first and break Rust-side round-trip identity
+  --> tests/ui/fail/duplicate_auto_intenum.rs:10:5
+   |
+10 |     B = 1,
+   |     ^

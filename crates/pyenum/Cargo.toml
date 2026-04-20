@@ -19,3 +19,10 @@ path = "src/lib.rs"
 [dependencies]
 pyenum-derive = { path = "../pyenum-derive", version = "=0.0.1" }
 pyo3 = { workspace = true, features = ["abi3-py311"] }
+
+[dev-dependencies]
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support", "html_reports"] }
+
+[[bench]]
+name = "cache"
+harness = false

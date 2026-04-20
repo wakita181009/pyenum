@@ -31,8 +31,8 @@ pub(crate) fn emit(spec: &DeriveSpec) -> TokenStream {
         let member_name = v.rust_ident.to_string();
         quote! {
             Self::#rust_variant => {
-                let class = <Self as ::pyenum::__private::PyEnum>::py_enum_class(py)?;
-                class.getattr(#member_name).map(|b| b.into_any())
+                <Self as ::pyenum::__private::PyEnum>::py_enum_class(py)?
+                    .getattr(#member_name)
             }
         }
     });

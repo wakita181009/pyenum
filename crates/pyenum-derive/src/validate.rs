@@ -88,75 +88,115 @@ fn check_base_value_compatibility(spec: &DeriveSpec) -> Result<()> {
 }
 
 fn check_duplicate_values(spec: &DeriveSpec) -> Result<()> {
-    let mut seen_ints: HashMap<i64, String> = HashMap::new();
-    let mut seen_strs: HashMap<String, String> = HashMap::new();
-
-    for variant in &spec.variants {
-        let variant_name = variant.rust_ident.to_string();
-        match &variant.value {
-            VariantValue::Int(v) => {
-                if let Some(prev) = seen_ints.get(v) {
-                    return Err(syn::Error::new(
-                        variant.rust_ident.span(),
-                        format!(
-                            "variant `{}` has discriminant `{}`, which was \
-                             already used by `{}`; Python would make the \
-                             second variant an alias of the first and \
-                             break Rust-side round-trip identity",
-                            variant_name, v, prev,
-                        ),
-                    ));
-                }
-                seen_ints.insert(*v, variant_name);
-            }
-            VariantValue::Str(s) => {
-                let normalized = s.clone();
-                if let Some(prev) = seen_strs.get(&normalized) {
-                    return Err(syn::Error::new(
-                        variant.rust_ident.span(),
-                        format!(
-                            "variant `{}` has value `{:?}`, which was \
-                             already used by `{}`; Python would make the \
-                             second variant an alias of the first and \
-                             break Rust-side round-trip identity",
-                            variant_name, s, prev,
-                        ),
-                    ));
-                }
-                seen_strs.insert(normalized, variant_name);
-            }
-            VariantValue::Auto => {
-                // For `StrEnum`, Python's `auto()` lowercases the variant
-                // name. Check for collisions against explicit string
-                // values and other auto-lowercased names in the same
-                // enum. Other bases resolve `auto()` to deterministic
-                // sequences (ints / powers-of-two) that cannot collide
-                // with peer auto values, and Rust forbids explicit
-                // duplicate integer discriminants, so we skip the
-                // non-StrEnum case.
-                if spec.base == BaseSelector::StrEnum {
-                    let lowered = variant_name.to_lowercase();
-                    if let Some(prev) = seen_strs.get(&lowered) {
-                        return Err(syn::Error::new(
-                            variant.rust_ident.span(),
-                            format!(
-                                "variant `{}` auto-lowercases to `{:?}`, \
-                                 which was already used by `{}`; Python \
-                                 would make the second variant an alias \
-                                 of the first and break Rust-side \
-                                 round-trip identity (add an explicit \
-                                 `#[pyenum(value = \"...\")]` to \
-                                 disambiguate)",
-                                variant_name, lowered, prev,
-                            ),
-                        ));
-                    }
-                    seen_strs.insert(lowered, variant_name);
-                }
-            }
+    match spec.base {
+        BaseSelector::StrEnum => check_duplicate_str_values(spec),
+        BaseSelector::Enum | BaseSelector::IntEnum | BaseSelector::Flag | BaseSelector::IntFlag => {
+            check_duplicate_int_values(spec)
         }
     }
+}
+
+fn check_duplicate_str_values(spec: &DeriveSpec) -> Result<()> {
+    let mut seen: HashMap<String, String> = HashMap::new();
+    for variant in &spec.variants {
+        let variant_name = variant.rust_ident.to_string();
+        let (key, is_auto) = match &variant.value {
+            VariantValue::Str(s) => (s.clone(), false),
+            VariantValue::Auto => (variant_name.to_lowercase(), true),
+            // Integer discriminants are rejected by `check_base_value_compatibility`.
+            VariantValue::Int(_) => continue,
+        };
+        if let Some(prev) = seen.get(&key) {
+            let detail = if is_auto {
+                format!(
+                    "variant `{variant_name}` auto-lowercases to `{key:?}`, \
+                     which was already used by `{prev}`; Python would make \
+                     the second variant an alias of the first and break \
+                     Rust-side round-trip identity (add an explicit \
+                     `#[pyenum(value = \"...\")]` to disambiguate)"
+                )
+            } else {
+                format!(
+                    "variant `{variant_name}` has value `{key:?}`, which \
+                     was already used by `{prev}`; Python would make the \
+                     second variant an alias of the first and break \
+                     Rust-side round-trip identity"
+                )
+            };
+            return Err(syn::Error::new(variant.rust_ident.span(), detail));
+        }
+        seen.insert(key, variant_name);
+    }
     Ok(())
+}
+
+fn check_duplicate_int_values(spec: &DeriveSpec) -> Result<()> {
+    let mut seen: HashMap<i64, String> = HashMap::new();
+    // Python's `auto()` for integer-shaped bases is driven by the *last*
+    // assigned value (for Flag/IntFlag: `bit_length(last) + 1`; for
+    // Enum/IntEnum: `last + 1`). Track it as we walk the variants in
+    // declaration order so we can diagnose auto↔explicit collisions the
+    // same way Python's functional `enum.*` constructor resolves them.
+    let mut last: Option<i64> = None;
+    for variant in &spec.variants {
+        let variant_name = variant.rust_ident.to_string();
+        let (value, is_auto) = match &variant.value {
+            VariantValue::Int(x) => (*x, false),
+            VariantValue::Auto => (auto_int_for_base(spec.base, last), true),
+            // String values are rejected by `check_base_value_compatibility`.
+            VariantValue::Str(_) => continue,
+        };
+        if let Some(prev) = seen.get(&value) {
+            let detail = if is_auto {
+                format!(
+                    "variant `{variant_name}`'s `auto()` resolves to \
+                     `{value}`, which was already used by `{prev}`; Python \
+                     would make the second variant an alias of the first \
+                     and break Rust-side round-trip identity (give one \
+                     variant an explicit discriminant to disambiguate)"
+                )
+            } else {
+                format!(
+                    "variant `{variant_name}` has discriminant `{value}`, \
+                     which was already used by `{prev}`; Python would make \
+                     the second variant an alias of the first and break \
+                     Rust-side round-trip identity"
+                )
+            };
+            return Err(syn::Error::new(variant.rust_ident.span(), detail));
+        }
+        seen.insert(value, variant_name);
+        last = Some(value);
+    }
+    Ok(())
+}
+
+/// Mirror CPython's `_generate_next_value_` for integer-shaped enum bases.
+///
+/// * `Enum` / `IntEnum`: `last + 1` (start = 1 when no prior value exists).
+/// * `Flag` / `IntFlag`: `1 << last.bit_length()` — the next power of two
+///   strictly above the last assigned value (1 when no prior value exists).
+///
+/// Negative `last` values fall back to `1`; CPython's Flag machinery rejects
+/// them at class-construction time, so the exact Rust-side return value here
+/// only matters for collision detection against other explicit values.
+fn auto_int_for_base(base: BaseSelector, last: Option<i64>) -> i64 {
+    match base {
+        BaseSelector::Enum | BaseSelector::IntEnum => last.map_or(1, |n| n.saturating_add(1)),
+        BaseSelector::Flag | BaseSelector::IntFlag => match last {
+            None => 1,
+            Some(n) if n <= 0 => 1,
+            Some(n) => {
+                let bit_len = u64::BITS - (n as u64).leading_zeros();
+                if bit_len >= i64::BITS - 1 {
+                    i64::MAX
+                } else {
+                    1_i64 << bit_len
+                }
+            }
+        },
+        BaseSelector::StrEnum => unreachable!("string-shaped base routed to int path"),
+    }
 }
 
 fn base_display(base: BaseSelector) -> &'static str {
@@ -318,6 +358,97 @@ mod tests {
             vec![
                 ("A", VariantValue::Int(1)),
                 ("B", VariantValue::Int(2)),
+                ("C", VariantValue::Auto),
+            ],
+        );
+        assert!(run(s).is_ok());
+    }
+
+    #[test]
+    fn rejects_auto_colliding_with_explicit_intenum() {
+        // `A` auto-resolves to 1; `B = 1` collides and would be aliased by
+        // CPython's `enum` machinery.
+        let s = spec(
+            BaseSelector::IntEnum,
+            vec![("A", VariantValue::Auto), ("B", VariantValue::Int(1))],
+        );
+        let err = run_err(s);
+        assert!(err.contains("`B`"), "{err}");
+        assert!(err.contains("already used by `A`"), "{err}");
+        assert!(err.contains("alias"), "{err}");
+    }
+
+    #[test]
+    fn rejects_explicit_colliding_with_auto_intenum() {
+        // `A = 5`, `B` auto -> 6, `C = 6` collides with `B`.
+        let s = spec(
+            BaseSelector::IntEnum,
+            vec![
+                ("A", VariantValue::Int(5)),
+                ("B", VariantValue::Auto),
+                ("C", VariantValue::Int(6)),
+            ],
+        );
+        let err = run_err(s);
+        assert!(err.contains("`C`"), "{err}");
+        assert!(err.contains("already used by `B`"), "{err}");
+    }
+
+    #[test]
+    fn rejects_auto_colliding_with_explicit_flag() {
+        // `Read` auto -> 1; `Write = 1` collides.
+        let s = spec(
+            BaseSelector::Flag,
+            vec![
+                ("Read", VariantValue::Auto),
+                ("Write", VariantValue::Int(1)),
+            ],
+        );
+        let err = run_err(s);
+        assert!(err.contains("`Write`"), "{err}");
+        assert!(err.contains("already used by `Read`"), "{err}");
+    }
+
+    #[test]
+    fn rejects_auto_resolving_to_prior_explicit_flag() {
+        // `A = 4`, `B = 2`, `C` auto. Python's Flag auto doubles the last
+        // value's high bit: bit_length(2) = 2, so C -> 2^2 = 4, collides with A.
+        let s = spec(
+            BaseSelector::Flag,
+            vec![
+                ("A", VariantValue::Int(4)),
+                ("B", VariantValue::Int(2)),
+                ("C", VariantValue::Auto),
+            ],
+        );
+        let err = run_err(s);
+        assert!(err.contains("`C`"), "{err}");
+        assert!(err.contains("already used by `A`"), "{err}");
+    }
+
+    #[test]
+    fn accepts_all_auto_intflag_power_of_two() {
+        // Classic Flag pattern: every variant auto -> 1, 2, 4, 8. All distinct.
+        let s = spec(
+            BaseSelector::IntFlag,
+            vec![
+                ("Read", VariantValue::Auto),
+                ("Write", VariantValue::Auto),
+                ("Exec", VariantValue::Auto),
+                ("Admin", VariantValue::Auto),
+            ],
+        );
+        assert!(run(s).is_ok());
+    }
+
+    #[test]
+    fn accepts_explicit_then_auto_intenum() {
+        // `A = 10`, `B` auto -> 11, `C` auto -> 12. No collision.
+        let s = spec(
+            BaseSelector::IntEnum,
+            vec![
+                ("A", VariantValue::Int(10)),
+                ("B", VariantValue::Auto),
                 ("C", VariantValue::Auto),
             ],
         );

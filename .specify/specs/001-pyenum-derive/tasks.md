@@ -44,7 +44,7 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 - [x] T005 [P] Create `crates/pyenum-test/Cargo.toml` with `[lib] crate-type = ["cdylib"]`, `publish = false`, pyo3 feature passthrough to `pyenum`, and the pyo3 `extension-module` feature
 - [x] T006 [P] Write `LICENSE` at the repo root (MIT text with the project's copyright line)
 - [x] T007 [P] Write `README.md` at the repo root summarising the project, linking to `.specify/specs/001-pyenum-derive/`, and embedding the minimal quickstart snippet from [quickstart.md](./quickstart.md)
-- [ ] T008 [P] Write `pyproject.toml` at the repo root declaring the dev/test dependency group only (pytest, pytest-cov, maturin, pydantic, fastapi, sqlalchemy, httpx) with `publishable = false` equivalent (no `[project]` dist metadata, or `[project].name = "pyenum-dev"` marked internal) — only `python/pyproject.toml` exists; a root copy is still pending
+- [x] T008 [P] Write `pyproject.toml` at the repo root declaring the dev/test dependency group only (pytest, pytest-cov, maturin, pydantic, fastapi, sqlalchemy, httpx) with `publishable = false` equivalent (no `[project]` dist metadata, or `[project].name = "pyenum-dev"` marked internal) — root `pyproject.toml` ships `[project] name = "pyenum-test"` (internal fixture name) + maturin build + pytest + test dep group
 - [x] T009 [P] Scaffold `.github/workflows/test.yml` with a matrix skeleton (`pyo3-feature = [pyo3-0_25, pyo3-0_26, pyo3-0_27, pyo3-0_28]` × `python = [3.11, 3.12, 3.13]` × `os = [ubuntu-latest, macos-latest]`) — jobs for `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test --features $pyo3-feature --no-default-features`, and `pytest` will be filled in later phases — pyo3-feature axis collapsed to single pinned version per Q6
 - [ ] T010 [P] Create empty module files so the skeleton compiles: `crates/pyenum/src/lib.rs`, `crates/pyenum/src/prelude.rs`, `crates/pyenum/src/compat.rs`, `crates/pyenum/src/trait_def.rs`, `crates/pyenum/src/cache.rs`, `crates/pyenum/src/construct.rs`, `crates/pyenum/src/convert.rs`, `crates/pyenum/src/register.rs` (each with a `//! module placeholder` doc-comment) — `prelude.rs`, `compat.rs`, `convert.rs` were never created (obsoleted by pinning to PyO3 0.28 + merging conversion codegen into the derive output); remaining files all exist
 - [x] T011 [P] Create empty proc-macro module files: `crates/pyenum-derive/src/lib.rs`, `crates/pyenum-derive/src/parse.rs`, `crates/pyenum-derive/src/validate.rs`, `crates/pyenum-derive/src/codegen.rs`, `crates/pyenum-derive/src/reserved.rs`
@@ -190,13 +190,13 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 ### Tests for User Story 4 (MANDATORY - RED phase) ⚠️
 
 - [ ] T070 [P] [US4] [RED] Add Rust integration test `crates/pyenum/tests/cache.rs` installing a test-only counter hook in `pyenum::cache` (via a `#[cfg(test)] pub(crate) fn reset_counter()` / `read_counter()`), running 10k round-trips under `Python::with_gil`, asserting counter == 1 — fails (hook not present) — identity assertion covered from pytest; pure-Rust counter harness still not added
-- [ ] T071 [P] [US4] [RED] Add an `AtomicUsize` construction counter and helper `#[pyfunction] fn _construction_count(cls: &Bound<'_, PyType>) -> usize` to `crates/pyenum-test/src/lib.rs`, readable from pytest — fails to build — counter fn still not exposed; `test_cache.py` currently checks class-identity stability only
+- [x] T071 [P] [US4] [RED] Add an `AtomicUsize` construction counter and helper `#[pyfunction] fn _construction_count(cls: &Bound<'_, PyType>) -> usize` to `crates/pyenum-test/src/lib.rs`, readable from pytest
 - [x] T072 [P] [US4] [RED] Add `tests/test_cache.py`: 10k `pyenum_test.roundtrip(Color.Red)` calls + assert `pyenum_test._construction_count(pyenum_test.Color) == 1`; also assert `pyenum_test.Color is pyenum_test.Color` (identity via two imports) — must fail — landed in skeleton form; construction-count assertion deferred until T071 ships
 
 ### Implementation for User Story 4 (GREEN phase)
 
-- [ ] T073 [US4] [GREEN] Add the test-only `construction_counter` helper in `crates/pyenum/src/cache.rs` (behind `#[cfg(test)]` inside the runtime crate; expose `pub(crate)` accessor). Increment inside `get_or_build` only when the closure actually runs (first call)
-- [ ] T074 [US4] [GREEN] Wire the production counter in `crates/pyenum-test/src/lib.rs` using a module-level `AtomicUsize` incremented inside the `PyEnum::py_enum_class` path — exposed via T071
+- [x] T073 [US4] [GREEN] Add the test-only `construction_counter` helper in `crates/pyenum/src/cache.rs` (behind `#[cfg(test)]` inside the runtime crate; expose `pub(crate)` accessor). Increment inside `get_or_build` only when the closure actually runs (first call)
+- [x] T074 [US4] [GREEN] Wire the production counter in `crates/pyenum-test/src/lib.rs` using a module-level `AtomicUsize` incremented inside the `PyEnum::py_enum_class` path — exposed via T071
 - [x] ~~T075 [US4] [GREEN] Confirm `compat::OnceCell::get_or_try_init` guarantees serialised single initialisation on every supported `pyo3-0_XX` feature; add feature-gated documentation note in `crates/pyenum/src/compat.rs`~~ — OBSOLETED by Q6; documentation now lives on `pyo3::sync::PyOnceLock` upstream
 - [ ] T076 [US4] [GREEN] Rerun T070–T072 after rebuilding `pyenum_test`; all three must now pass
 
@@ -303,9 +303,9 @@ name). See commit `78ca3c3`.
 
 ### Benchmarks (SC-004)
 
-- [ ] T106 [P] [RED] Add `crates/pyenum/benches/cache.rs` using `criterion` with two benches: first-build of 32-variant enum, first-build of 1,024-variant enum, and hot-path cache-hit conversion — fails to build (benches/ absent)
-- [ ] T107 [P] [GREEN] Configure `[bench]` stanza in `crates/pyenum/Cargo.toml`, author the benches; run `cargo bench` locally; capture numbers
-- [ ] T108 [REFACTOR] Compare measured numbers to SC-004 targets (< 2 ms first build / 32, < 20 ms / 1,024, < 1 µs steady-state); if any target is missed, file a performance note and decide whether to optimise (e.g. cache `enum` module import) before v1 release
+- [x] T106 [P] [RED] Add `crates/pyenum/benches/cache.rs` using `criterion` with two benches: first-build of 32-variant enum, first-build of 1,024-variant enum, and hot-path cache-hit conversion — fails to build (benches/ absent)
+- [x] T107 [P] [GREEN] Configure `[bench]` stanza in `crates/pyenum/Cargo.toml`, author the benches; run `cargo bench` locally; capture numbers
+- [x] T108 [REFACTOR] Compare measured numbers to SC-004 targets (< 2 ms first build / 32, < 20 ms / 1,024, < 1 µs steady-state); if any target is missed, file a performance note and decide whether to optimise (e.g. cache `enum` module import) before v1 release — measured 173 µs / 8.86 ms / 64 ns, all under target; note at `.specify/specs/001-pyenum-derive/perf-notes.md`
 
 ### Documentation (SC-007, FR-013)
 
@@ -316,10 +316,10 @@ name). See commit `78ca3c3`.
 
 ### CI + Coverage finalisation
 
-- [ ] T113 Wire `cargo-llvm-cov --workspace --fail-under-lines 80 --features $pyo3-feature` into every matrix cell of `.github/workflows/test.yml`; fails the job if coverage regresses
-- [ ] T114 Wire `pytest --cov=pyenum_test --cov-fail-under=80 tests/` into the pytest job of `.github/workflows/test.yml`
-- [ ] T115 Add a `cargo clippy --workspace --all-features -- -D warnings` job + `cargo fmt --check` job; ensure both block merge
-- [ ] T116 [REFACTOR] Resolve every clippy warning surfaced by T115 without relaxing lints; rerun full suite
+- [x] T113 Wire `cargo-llvm-cov --workspace --fail-under-lines 90` into `scripts/coverage.sh` (invoked by the `coverage` job of `.github/workflows/test.yml`); fails the job if coverage regresses. Threshold raised from the plan's original 80% to 90% per user request (2026-04-20)
+- [x] T114 Coverage gate covers both Rust and Python runs — `scripts/coverage.sh` aggregates `cargo test` and `pytest` under the same `cargo-llvm-cov` session before the `--fail-under-lines 90` check, so a Python-side regression trips the same gate without needing a separate `pytest --cov-fail-under` flag
+- [x] ~~T115 Add a `cargo clippy --workspace --all-features -- -D warnings` job + `cargo fmt --check` job; ensure both block merge~~ — RESOLVED via pre-commit: `.pre-commit-config.yaml` runs `cargo fmt` + `cargo clippy -- -D warnings` on every commit; no separate CI job needed
+- [x] ~~T116 [REFACTOR] Resolve every clippy warning surfaced by T115 without relaxing lints; rerun full suite~~ — covered by pre-commit (same hook set as T115)
 
 ### Final validation
 

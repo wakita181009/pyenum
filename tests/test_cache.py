@@ -31,6 +31,36 @@ def test_class_identity_stable_across_conversion_boundary() -> None:
     for member in members:
         assert member is pyenum_test.Color.Red
 
+    # The pyenum-test module-init routes `Color` through `PyEnum::py_enum_class`
+    # exactly once; repeated roundtrips stay on the cache-hit fast path and
+    # never increment the counter, so the value should remain at 1.
+    assert pyenum_test._construction_count(pyenum_test.Color) == 1
+
+
+def test_construction_count_is_one_per_registered_class() -> None:
+    for cls in (
+        pyenum_test.Color,
+        pyenum_test.HttpStatus,
+        pyenum_test.Greeting,
+        pyenum_test.Language,
+        pyenum_test.Permission,
+        pyenum_test.BitPerms,
+    ):
+        assert pyenum_test._construction_count(cls) == 1
+
+
+def test_construction_count_rejects_foreign_class() -> None:
+    import enum
+
+    class Outsider(enum.Enum):
+        A = 1
+
+    try:
+        pyenum_test._construction_count(Outsider)
+    except TypeError:
+        return
+    raise AssertionError("expected TypeError for unregistered class")
+
 
 def test_each_derived_type_gets_its_own_class() -> None:
     # Distinct Rust enums must map to distinct Python classes, even when

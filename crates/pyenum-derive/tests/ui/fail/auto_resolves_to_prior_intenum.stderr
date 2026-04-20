@@ -1,0 +1,17 @@
+error: variant `C` has discriminant `6`, which was already used by `B`; Python would make the second variant an alias of the first and break Rust-side round-trip identity
+  --> tests/ui/fail/auto_resolves_to_prior_intenum.rs:11:5
+   |
+11 |     C = 6,
+   |     ^
+
+error[E0081]: discriminant value `6` assigned more than once
+  --> tests/ui/fail/auto_resolves_to_prior_intenum.rs:8:1
+   |
+ 8 | pub enum Bad {
+   | ^^^^^^^^^^^^
+ 9 |     A = 5,
+   |     - discriminant for `B` incremented from this startpoint (`A` + 1 variant later => `B` = 6)
+10 |     B,
+   |     - `6` assigned here
+11 |     C = 6,
+   |         - `6` assigned here

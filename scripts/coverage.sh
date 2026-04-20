@@ -24,7 +24,7 @@ cargo llvm-cov clean --workspace
 eval "$(cargo llvm-cov show-env --export-prefix 2>/dev/null)"
 
 # Rust tests (proc-macro unit tests, trybuild, pyenum lib tests).
-cargo test --workspace --all-targets
+cargo test --workspace --lib --tests
 
 # Build the pyenum-test cdylib against the current Python interpreter.
 # `maturin develop` respects RUSTC_WRAPPER + RUSTFLAGS from the env above.
@@ -38,3 +38,8 @@ fi
 
 # Aggregate the two runs into a single report.
 cargo llvm-cov report "$@"
+
+# Re-runs `report` with `--fail-under-lines 80` so the job exits non-zero if
+# coverage regresses; the earlier call above still emits whatever format the
+# caller asked for (text summary, --html, --lcov, ...).
+cargo llvm-cov report --fail-under-lines 80
