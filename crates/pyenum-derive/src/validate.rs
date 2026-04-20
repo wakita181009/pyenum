@@ -229,6 +229,8 @@ mod tests {
                     span: Span::call_site(),
                 })
                 .collect(),
+            python_module: None,
+            python_qualname: None,
         }
     }
 

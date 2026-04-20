@@ -27,6 +27,12 @@ pub(crate) struct DeriveSpec {
     pub base: BaseSelector,
     /// Declaration-order variants.
     pub variants: Vec<VariantSpec>,
+    /// `#[pyenum(module = "...")]` — written into `__module__` for pickle.
+    /// `None` when unset; the runtime crate emits no `module=` kwarg.
+    pub python_module: Option<String>,
+    /// `#[pyenum(qualname = "...")]` — written into `__qualname__`. `None`
+    /// means CPython uses the class name as the default qualname.
+    pub python_qualname: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -137,7 +143,12 @@ fn parse(input: DeriveInput) -> Result<DeriveSpec> {
         ));
     }
 
-    let (python_name, base) = parse_pyenum_attr(&input.attrs, &input.ident)?;
+    let EnumAttrs {
+        python_name,
+        base,
+        python_module,
+        python_qualname,
+    } = parse_pyenum_attr(&input.attrs, &input.ident)?;
 
     let mut variants = Vec::with_capacity(data_enum.variants.len());
     for variant in data_enum.variants {
@@ -149,7 +160,17 @@ fn parse(input: DeriveInput) -> Result<DeriveSpec> {
         python_name,
         base,
         variants,
+        python_module,
+        python_qualname,
     })
+}
+
+/// Enum-level `#[pyenum(...)]` attribute payload.
+struct EnumAttrs {
+    python_name: String,
+    base: BaseSelector,
+    python_module: Option<String>,
+    python_qualname: Option<String>,
 }
 
 fn parse_variant(variant: Variant) -> Result<VariantSpec> {
@@ -271,11 +292,13 @@ fn parse_int_literal(int: &LitInt) -> Result<VariantValue> {
         .map_err(|e| Error::new(int.span(), format!("invalid integer literal: {e}")))
 }
 
-/// Walk `#[pyenum(...)]` attributes and extract the base selector + python
-/// name override. Unknown keys and duplicate keys are rejected here.
-fn parse_pyenum_attr(attrs: &[Attribute], enum_ident: &Ident) -> Result<(String, BaseSelector)> {
+/// Walk `#[pyenum(...)]` attributes and resolve the enum-level keys. Unknown
+/// keys and duplicates are rejected here.
+fn parse_pyenum_attr(attrs: &[Attribute], enum_ident: &Ident) -> Result<EnumAttrs> {
     let mut base: Option<BaseSelector> = None;
     let mut python_name: Option<String> = None;
+    let mut python_module: Option<String> = None;
+    let mut python_qualname: Option<String> = None;
 
     for attr in attrs {
         if !attr.path().is_ident("pyenum") {
@@ -303,21 +326,39 @@ fn parse_pyenum_attr(attrs: &[Attribute], enum_ident: &Ident) -> Result<(String,
                 python_name = Some(value.value());
                 return Ok(());
             }
+            if meta.path.is_ident("module") {
+                if python_module.is_some() {
+                    return Err(meta.error("duplicate `module` in #[pyenum(...)]"));
+                }
+                let value: LitStr = meta.value()?.parse()?;
+                python_module = Some(value.value());
+                return Ok(());
+            }
+            if meta.path.is_ident("qualname") {
+                if python_qualname.is_some() {
+                    return Err(meta.error("duplicate `qualname` in #[pyenum(...)]"));
+                }
+                let value: LitStr = meta.value()?.parse()?;
+                python_qualname = Some(value.value());
+                return Ok(());
+            }
             let key = meta
                 .path
                 .get_ident()
                 .map(|i| i.to_string())
                 .unwrap_or_else(|| "(unknown)".to_string());
             Err(meta.error(format!(
-                "unknown key `{key}` in #[pyenum(...)]; expected one of: base, name"
+                "unknown key `{key}` in #[pyenum(...)]; expected one of: base, name, module, qualname"
             )))
         })?;
     }
 
-    Ok((
-        python_name.unwrap_or_else(|| enum_ident.to_string()),
-        base.unwrap_or(BaseSelector::Enum),
-    ))
+    Ok(EnumAttrs {
+        python_name: python_name.unwrap_or_else(|| enum_ident.to_string()),
+        base: base.unwrap_or(BaseSelector::Enum),
+        python_module,
+        python_qualname,
+    })
 }
 
 #[cfg(test)]

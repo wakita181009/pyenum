@@ -13,6 +13,14 @@ pub(crate) fn emit(spec: &DeriveSpec) -> TokenStream {
     let rust_ident = &spec.rust_ident;
     let python_name = &spec.python_name;
     let base_tokens = spec.base.tokens();
+    let module_tokens = match &spec.python_module {
+        Some(m) => quote!(::core::option::Option::Some(#m)),
+        None => quote!(::core::option::Option::None),
+    };
+    let qualname_tokens = match &spec.python_qualname {
+        Some(q) => quote!(::core::option::Option::Some(#q)),
+        None => quote!(::core::option::Option::None),
+    };
 
     let variant_count = spec.variants.len();
     let variant_count_lit = LitInt::new(&variant_count.to_string(), proc_macro2::Span::call_site());
@@ -114,6 +122,8 @@ pub(crate) fn emit(spec: &DeriveSpec) -> TokenStream {
                 name: #python_name,
                 base: #base_tokens,
                 variants: &[ #(#variant_literals),* ],
+                module: #module_tokens,
+                qualname: #qualname_tokens,
             };
 
             fn py_enum_class<'py>(

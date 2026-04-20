@@ -2,14 +2,14 @@
 
 use pyo3::IntoPyObject;
 use pyo3::prelude::*;
-use pyo3::types::{PyList, PyTuple, PyType};
+use pyo3::types::{PyDict, PyList, PyTuple, PyType};
 
 use crate::trait_def::{PyEnumSpec, VariantLiteral};
 
 /// Construct the Python enum class described by `spec`.
 ///
-/// Imports the `enum` module, calls `enum.<Base>(name, members)`, and hands
-/// back an owned `Bound<PyType>`. Variant values marked as
+/// Imports the `enum` module, calls `enum.<Base>(name, members, …)`, and
+/// hands back an owned `Bound<PyType>`. Variant values marked as
 /// [`VariantLiteral::Auto`] are passed as `enum.auto()` so CPython applies
 /// its per-base defaulting rules.
 pub fn build_py_enum<'py>(py: Python<'py>, spec: &PyEnumSpec) -> PyResult<Bound<'py, PyType>> {
@@ -31,6 +31,17 @@ pub fn build_py_enum<'py>(py: Python<'py>, spec: &PyEnumSpec) -> PyResult<Bound<
 
     let name_arg: Bound<'py, PyAny> = spec.name.into_pyobject(py)?.into_any();
     let args = PyTuple::new(py, [name_arg, members.into_any()])?;
-    let class = base_cls.call1(args)?;
+    let class = if spec.module.is_some() || spec.qualname.is_some() {
+        let kwargs = PyDict::new(py);
+        if let Some(m) = spec.module {
+            kwargs.set_item("module", m)?;
+        }
+        if let Some(q) = spec.qualname {
+            kwargs.set_item("qualname", q)?;
+        }
+        base_cls.call(args, Some(&kwargs))?
+    } else {
+        base_cls.call1(args)?
+    };
     class.cast_into::<PyType>().map_err(Into::into)
 }

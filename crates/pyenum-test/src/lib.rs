@@ -12,6 +12,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyModule, PyType};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
+#[pyenum(module = "pyenum_test")]
 pub enum Color {
     Red,
     Green,
@@ -19,7 +20,7 @@ pub enum Color {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
-#[pyenum(base = "IntEnum")]
+#[pyenum(base = "IntEnum", module = "pyenum_test")]
 pub enum HttpStatus {
     Ok = 200,
     NotFound = 404,
@@ -27,7 +28,7 @@ pub enum HttpStatus {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
-#[pyenum(base = "StrEnum")]
+#[pyenum(base = "StrEnum", module = "pyenum_test")]
 pub enum Greeting {
     Hello,
     World,
@@ -35,7 +36,7 @@ pub enum Greeting {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
-#[pyenum(base = "StrEnum")]
+#[pyenum(base = "StrEnum", module = "pyenum_test")]
 pub enum Language {
     #[pyenum(value = "Rust")]
     Rust,
@@ -46,7 +47,7 @@ pub enum Language {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
-#[pyenum(base = "Flag")]
+#[pyenum(base = "Flag", module = "pyenum_test")]
 pub enum Permission {
     Read = 1,
     Write = 2,
@@ -54,12 +55,22 @@ pub enum Permission {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
-#[pyenum(base = "IntFlag")]
+#[pyenum(base = "IntFlag", module = "pyenum_test")]
 pub enum BitPerms {
     Read = 1,
     Write = 2,
     Execute = 4,
     Admin = 8,
+}
+
+/// Fixture used to assert the default-off behaviour: without
+/// `#[pyenum(module = "...")]`, CPython cannot resolve the class from any
+/// `sys.modules` entry, and `pickle.dumps` raises `TypeError`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PyEnum)]
+pub enum UnpicklableColor {
+    Red,
+    Green,
+    Blue,
 }
 
 #[pyfunction]
@@ -107,6 +118,7 @@ static GREETING_COUNT: AtomicUsize = AtomicUsize::new(0);
 static LANGUAGE_COUNT: AtomicUsize = AtomicUsize::new(0);
 static PERMISSION_COUNT: AtomicUsize = AtomicUsize::new(0);
 static BITPERMS_COUNT: AtomicUsize = AtomicUsize::new(0);
+static UNPICKLABLE_COLOR_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 /// Associate a Rust enum type `T` with the counter registered for it during
 /// module init.
@@ -118,6 +130,7 @@ fn counter_for<T: PyEnumTrait>() -> &'static AtomicUsize {
         "Language" => &LANGUAGE_COUNT,
         "Permission" => &PERMISSION_COUNT,
         "BitPerms" => &BITPERMS_COUNT,
+        "UnpicklableColor" => &UNPICKLABLE_COLOR_COUNT,
         other => panic!("pyenum_test: no counter registered for `{other}`"),
     }
 }
@@ -145,13 +158,17 @@ fn add_enum_counted<T: PyEnumTrait>(module: &Bound<'_, PyModule>) -> PyResult<()
 #[pyo3(name = "_construction_count")]
 fn construction_count(cls: &Bound<'_, PyType>) -> PyResult<usize> {
     let py = cls.py();
-    let candidates: [(Bound<'_, PyType>, &AtomicUsize); 6] = [
+    let candidates: [(Bound<'_, PyType>, &AtomicUsize); 7] = [
         (Color::py_enum_class(py)?, &COLOR_COUNT),
         (HttpStatus::py_enum_class(py)?, &HTTP_STATUS_COUNT),
         (Greeting::py_enum_class(py)?, &GREETING_COUNT),
         (Language::py_enum_class(py)?, &LANGUAGE_COUNT),
         (Permission::py_enum_class(py)?, &PERMISSION_COUNT),
         (BitPerms::py_enum_class(py)?, &BITPERMS_COUNT),
+        (
+            UnpicklableColor::py_enum_class(py)?,
+            &UNPICKLABLE_COLOR_COUNT,
+        ),
     ];
     for (registered, counter) in &candidates {
         if cls.is(registered) {
@@ -171,6 +188,7 @@ fn pyenum_test(m: &Bound<'_, PyModule>) -> PyResult<()> {
     add_enum_counted::<Language>(m)?;
     add_enum_counted::<Permission>(m)?;
     add_enum_counted::<BitPerms>(m)?;
+    add_enum_counted::<UnpicklableColor>(m)?;
     m.add_function(wrap_pyfunction!(color_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(http_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(greeting_roundtrip, m)?)?;

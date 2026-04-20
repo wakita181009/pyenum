@@ -65,6 +65,13 @@ pub struct PyEnumSpec {
     pub base: PyEnumBase,
     /// Variants in declaration order.
     pub variants: &'static [(&'static str, VariantLiteral)],
+    /// `#[pyenum(module = "...")]` — forwarded as `module=` to the functional
+    /// `enum.*` constructor. Required for pickle support; when `None`, CPython
+    /// marks the class unpicklable.
+    pub module: Option<&'static str>,
+    /// `#[pyenum(qualname = "...")]` — forwarded as `qualname=`. Defaults to
+    /// [`Self::name`] on the CPython side when `None`.
+    pub qualname: Option<&'static str>,
 }
 
 /// Bridge between a `#[derive(PyEnum)]` Rust type and its cached Python class.

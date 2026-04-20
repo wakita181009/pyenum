@@ -41,6 +41,8 @@ fn spec_32() -> &'static PyEnumSpec {
         name: "BenchEnum32",
         base: PyEnumBase::IntEnum,
         variants: make_variants(32),
+        module: None,
+        qualname: None,
     })
 }
 
@@ -50,6 +52,8 @@ fn spec_1024() -> &'static PyEnumSpec {
         name: "BenchEnum1024",
         base: PyEnumBase::IntEnum,
         variants: make_variants(1024),
+        module: None,
+        qualname: None,
     })
 }
 
@@ -63,6 +67,8 @@ fn spec_cache_hit() -> &'static PyEnumSpec {
             ("B", VariantLiteral::Int(1)),
             ("C", VariantLiteral::Int(2)),
         ],
+        module: None,
+        qualname: None,
     })
 }
 
