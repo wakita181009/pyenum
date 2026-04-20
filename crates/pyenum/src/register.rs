@@ -11,6 +11,11 @@ use pyo3::types::PyModule;
 use crate::trait_def::PyEnum;
 
 /// Register the Python class for `T` onto `module` under `T::SPEC.name`.
+///
+/// If `module` already has an attribute with the same name, it is silently
+/// replaced — consistent with `PyModule::add` and `m.add_class::<T>()?`.
+/// Avoid registering two enums whose `#[pyenum(name = "...")]` resolves to
+/// the same string within a single module.
 pub fn add_enum<T: PyEnum>(module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = module.py();
     let class = T::py_enum_class(py)?;
