@@ -1,4 +1,9 @@
 //! Core trait + metadata types emitted by `#[derive(PyEnum)]`.
+//!
+//! User code never implements these by hand — the derive is the only
+//! supported entry point. The types are public so the derive's output can
+//! name them, and so generic helpers like [`crate::add_enum`] can be bound
+//! over `T: PyEnum`.
 
 use pyo3::prelude::*;
 use pyo3::types::PyType;
@@ -35,34 +40,38 @@ impl PyEnumBase {
 ///
 /// `Auto` defers value resolution to CPython's `enum.auto()` so behaviour
 /// tracks whatever rules the host Python version enforces for the chosen
-/// base.
+/// base (sequential ints for `Enum`/`IntEnum`, powers of two for
+/// `Flag`/`IntFlag`, lowercased name for `StrEnum`).
 #[derive(Debug, Clone, Copy)]
 pub enum VariantLiteral {
-    /// Explicit integer literal (from a Rust discriminant).
+    /// Explicit integer literal from a Rust discriminant (`Variant = 42`).
     Int(i64),
-    /// Explicit string literal from a variant-level
-    /// `#[pyenum(value = "...")]` attribute.
+    /// Explicit string literal from `#[pyenum(value = "...")]`.
     Str(&'static str),
-    /// Defer to Python's `enum.auto()` per-base semantics.
+    /// Defer to Python's `enum.auto()`.
     Auto,
 }
 
 /// Static metadata emitted by `#[derive(PyEnum)]` for each derived enum.
+///
+/// Stored as `const SPEC: PyEnumSpec` on every `impl PyEnum`, driving class
+/// construction ([`crate::add_enum`]) and conversion error messages.
 #[derive(Debug, Clone, Copy)]
 pub struct PyEnumSpec {
-    /// Python class name (defaults to the Rust enum's identifier;
-    /// overridable via `#[pyenum(name = "...")]`).
+    /// Python class name — defaults to the Rust enum identifier, overridable
+    /// via `#[pyenum(name = "...")]`.
     pub name: &'static str,
     /// Chosen Python enum base class.
     pub base: PyEnumBase,
-    /// Ordered variants, preserving declaration order.
+    /// Variants in declaration order.
     pub variants: &'static [(&'static str, VariantLiteral)],
 }
 
 /// Bridge between a `#[derive(PyEnum)]` Rust type and its cached Python class.
 ///
-/// User code never implements this trait by hand — the derive is the only
-/// supported path.
+/// Implemented only by the derive. Downstream code interacts via the free
+/// helper [`crate::add_enum`] or PyO3's `IntoPyObject` / `FromPyObject`
+/// conversions (also emitted by the derive).
 pub trait PyEnum: Sized + Copy + 'static {
     /// Static metadata describing the derived type.
     const SPEC: PyEnumSpec;
@@ -72,10 +81,14 @@ pub trait PyEnum: Sized + Copy + 'static {
     fn py_enum_class(py: Python) -> PyResult<Bound<PyType>>;
 
     /// Returns the Python enum member corresponding to `self`.
+    ///
+    /// Resolves the cached per-variant `Py<PyAny>` and rebinds it to `py`;
+    /// no Python-side attribute lookup on the steady-state path.
     fn to_py_member<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>>;
 
     /// Extracts `Self` from a Python object that must be a member of the
-    /// cached class. Raises `TypeError` otherwise.
+    /// cached class. Raises `TypeError` with the enum name in the message
+    /// for any other object.
     fn from_py_member(obj: &Bound<PyAny>) -> PyResult<Self>;
 }
 

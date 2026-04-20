@@ -9,19 +9,18 @@
 
 `pyenum` provides a `#[derive(PyEnum)]` macro that turns a Rust `enum` into a
 genuine Python enum class. The resulting type passes `isinstance(x, enum.Enum)`,
-iterates in declaration order, and interoperates with the tools that actually
-check enum membership — pydantic, FastAPI, SQLAlchemy, `match`/`case`,
-dataclasses — with zero hand-written conversion code.
+iterates in declaration order, and works wherever the standard `enum.Enum`
+protocol is expected — with zero hand-written conversion code.
 
 ---
 
 ## Why
 
 PyO3's `#[pyclass]` gives you a Python class, but not a Python `enum.Enum`.
-Downstream libraries that branch on `isinstance(x, enum.Enum)` — pydantic
-field validation, FastAPI request parsing, SQLAlchemy `Enum` columns — reject
-the result. The common workaround is hand-written `FromPyObject` /
-`IntoPyObject` shims plus a mirror class on the Python side.
+Any downstream code that branches on `isinstance(x, enum.Enum)` — `match`/
+`case` patterns, framework validators, ORM enum columns — rejects the result.
+The common workaround is hand-written `FromPyObject` / `IntoPyObject` shims
+plus a mirror class on the Python side.
 
 `pyenum` eliminates that boilerplate:
 
