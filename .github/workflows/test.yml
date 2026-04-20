@@ -32,9 +32,9 @@ jobs:
         with:
           key: test-${{ matrix.os }}-py${{ matrix.python }}
       - name: cargo test
-        run: cargo test --workspace --all-targets
+        run: cargo test --workspace --exclude pyenum-test --all-targets
       - name: doctests
-        run: cargo test --workspace --doc
+        run: cargo test --workspace --exclude pyenum-test --doc
 
   trybuild:
     name: trybuild (compile-fail)
