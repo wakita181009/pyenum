@@ -10,12 +10,21 @@
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use pyenum::__private::{build_py_enum, get_or_build};
-use pyenum::{PyEnumBase, PyEnumSpec, VariantLiteral};
+use pyenum::{PyEnum, PyEnumBase, PyEnumSpec, PyEnumTrait, VariantLiteral};
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
 use pyo3::types::PyType;
 use std::hint::black_box;
 use std::sync::OnceLock;
+
+#[derive(Clone, Copy, PyEnum)]
+#[pyenum(base = "IntEnum")]
+#[allow(dead_code)]
+enum BenchColor {
+    Red = 1,
+    Green = 2,
+    Blue = 3,
+}
 
 fn make_variants(n: usize) -> &'static [(&'static str, VariantLiteral)] {
     let mut v: Vec<(&'static str, VariantLiteral)> = Vec::with_capacity(n);
@@ -106,10 +115,45 @@ fn bench_cache_hit(c: &mut Criterion) {
     });
 }
 
+fn bench_to_py_member(c: &mut Criterion) {
+    Python::initialize();
+    // Prime the derive's internal cache so the benchmarked call is always a
+    // hot-path member lookup.
+    Python::attach(|py| {
+        let _ = BenchColor::py_enum_class(py).unwrap();
+        let _ = BenchColor::Red.to_py_member(py).unwrap();
+    });
+    c.bench_function("to_py_member_hotpath", |b| {
+        b.iter(|| {
+            Python::attach(|py| {
+                let member = BenchColor::Green.to_py_member(py).unwrap();
+                black_box(member);
+            });
+        });
+    });
+}
+
+fn bench_from_py_member(c: &mut Criterion) {
+    Python::initialize();
+    // Materialise the Python member object once; every benchmarked call just
+    // round-trips it through `FromPyObject`.
+    let owned = Python::attach(|py| BenchColor::Blue.to_py_member(py).unwrap().unbind());
+    c.bench_function("from_py_member_hotpath", |b| {
+        b.iter(|| {
+            Python::attach(|py| {
+                let variant = BenchColor::from_py_member(owned.bind(py)).unwrap();
+                black_box(variant);
+            });
+        });
+    });
+}
+
 criterion_group!(
     benches,
     bench_first_build_32,
     bench_first_build_1024,
     bench_cache_hit,
+    bench_to_py_member,
+    bench_from_py_member,
 );
 criterion_main!(benches);

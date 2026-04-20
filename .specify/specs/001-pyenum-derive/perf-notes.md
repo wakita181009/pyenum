@@ -8,9 +8,22 @@ Environment: macOS (Darwin 25.3.0), CPython 3.11+ via PyO3 0.28.
 
 | Benchmark | Target | Measured (median) | Margin | Status |
 | --- | --- | --- | --- | --- |
-| First build, 32 variants   | `< 2 ms`   | ~173 µs   | ~11.5× under | ✅ |
-| First build, 1,024 variants | `< 20 ms`  | ~8.86 ms  | ~2.3× under  | ✅ |
-| Cache-hit class lookup     | `< 1 µs`   | ~64 ns    | ~15.5× under | ✅ |
+| First build, 32 variants   | `< 2 ms`   | ~179 µs   | ~11× under   | ✅ |
+| First build, 1,024 variants | `< 20 ms`  | ~9.06 ms  | ~2.2× under  | ✅ |
+| Cache-hit class lookup     | `< 1 µs`   | ~64 ns    | ~15× under   | ✅ |
+| `to_py_member` steady-state | `< 1 µs`   | ~64 ns    | ~15× under   | ✅ |
+| `from_py_member` steady-state | `< 1 µs` | ~63 ns    | ~16× under   | ✅ |
+
+The `to_py_member` / `from_py_member` benches were added in response to a
+review that flagged the earlier `getattr("name") + extract::<String>()`
++ linear `match` code path as an allocation- and µs-risk against SC-004.
+The current derive output caches each variant's `Py<PyAny>` member object
+in a per-type `PyOnceLock<[Py<PyAny>; N]>` at first use and thereafter:
+
+* `to_py_member` indexes the cached array by Rust-variant-ordinal.
+* `from_py_member` scans the array with `Bound::is()` pointer equality.
+
+Both paths are allocation-free after the first call.
 
 All three absolute targets are met on the reference host with healthy
 headroom. No optimisation work is required before v1.
