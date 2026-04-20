@@ -61,10 +61,9 @@ fn check_base_value_compatibility(spec: &DeriveSpec) -> Result<()> {
                     variant.rust_ident.span(),
                     format!(
                         "variant `{}` has a string `#[pyenum(value = ...)]` \
-                         but the enum base is `{}`, which requires integer \
-                         values",
+                         but the enum base is `{base}`, which requires \
+                         integer values",
                         variant.rust_ident,
-                        base_display(base),
                     ),
                 ));
             }
@@ -196,16 +195,6 @@ fn auto_int_for_base(base: BaseSelector, last: Option<i64>) -> i64 {
             }
         },
         BaseSelector::StrEnum => unreachable!("string-shaped base routed to int path"),
-    }
-}
-
-fn base_display(base: BaseSelector) -> &'static str {
-    match base {
-        BaseSelector::Enum => "Enum",
-        BaseSelector::IntEnum => "IntEnum",
-        BaseSelector::StrEnum => "StrEnum",
-        BaseSelector::Flag => "Flag",
-        BaseSelector::IntFlag => "IntFlag",
     }
 }
 
@@ -456,16 +445,24 @@ mod tests {
     }
 
     #[test]
-    fn base_display_covers_every_variant() {
-        for b in [
-            BaseSelector::Enum,
-            BaseSelector::IntEnum,
-            BaseSelector::StrEnum,
-            BaseSelector::Flag,
-            BaseSelector::IntFlag,
-        ] {
-            let name = base_display(b);
-            assert!(!name.is_empty());
-        }
+    fn base_selector_converts_to_python_enum_names() {
+        assert_eq!(<&'static str>::from(BaseSelector::Enum), "Enum");
+        assert_eq!(<&'static str>::from(BaseSelector::IntEnum), "IntEnum");
+        assert_eq!(<&'static str>::from(BaseSelector::StrEnum), "StrEnum");
+        assert_eq!(<&'static str>::from(BaseSelector::Flag), "Flag");
+        assert_eq!(<&'static str>::from(BaseSelector::IntFlag), "IntFlag");
+        assert_eq!(BaseSelector::IntFlag.to_string(), "IntFlag");
+    }
+
+    #[test]
+    fn base_selector_parses_from_str() {
+        use std::str::FromStr;
+        assert_eq!(
+            BaseSelector::from_str("IntEnum").unwrap(),
+            BaseSelector::IntEnum
+        );
+        let err = BaseSelector::from_str("Nope").unwrap_err();
+        assert!(err.contains("unknown pyenum base `Nope`"), "{err}");
+        assert!(err.contains("expected one of"), "{err}");
     }
 }

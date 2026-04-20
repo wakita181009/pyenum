@@ -6,7 +6,11 @@
 //! shape). Identity-level rejection (reserved names, base/value mismatch)
 //! happens in [`crate::validate`].
 
+use std::fmt;
+use std::str::FromStr;
+
 use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use syn::spanned::Spanned;
 use syn::{
     Attribute, Data, DeriveInput, Error, Expr, ExprLit, ExprUnary, Fields, Ident, Lit, LitInt,
@@ -36,29 +40,43 @@ pub(crate) enum BaseSelector {
 
 impl BaseSelector {
     pub(crate) fn tokens(self) -> TokenStream {
-        use quote::quote;
-        match self {
-            BaseSelector::Enum => quote!(::pyenum::__private::PyEnumBase::Enum),
-            BaseSelector::IntEnum => quote!(::pyenum::__private::PyEnumBase::IntEnum),
-            BaseSelector::StrEnum => quote!(::pyenum::__private::PyEnumBase::StrEnum),
-            BaseSelector::Flag => quote!(::pyenum::__private::PyEnumBase::Flag),
-            BaseSelector::IntFlag => quote!(::pyenum::__private::PyEnumBase::IntFlag),
+        let name = Ident::new(self.into(), Span::call_site());
+        quote!(::pyenum::__private::PyEnumBase::#name)
+    }
+}
+
+/// Sole source of truth for base-name strings; every other conversion
+/// (tokens, `Display`, `FromStr`) derives from this `From` impl.
+impl From<BaseSelector> for &'static str {
+    fn from(value: BaseSelector) -> Self {
+        match value {
+            BaseSelector::Enum => "Enum",
+            BaseSelector::IntEnum => "IntEnum",
+            BaseSelector::StrEnum => "StrEnum",
+            BaseSelector::Flag => "Flag",
+            BaseSelector::IntFlag => "IntFlag",
         }
     }
+}
 
-    fn from_str(value: &LitStr) -> Result<Self> {
-        match value.value().as_str() {
+impl fmt::Display for BaseSelector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str((*self).into())
+    }
+}
+
+impl FromStr for BaseSelector {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
             "Enum" => Ok(BaseSelector::Enum),
             "IntEnum" => Ok(BaseSelector::IntEnum),
             "StrEnum" => Ok(BaseSelector::StrEnum),
             "Flag" => Ok(BaseSelector::Flag),
             "IntFlag" => Ok(BaseSelector::IntFlag),
-            other => Err(Error::new(
-                value.span(),
-                format!(
-                    "unknown pyenum base `{other}`; expected one of \
-                     `Enum`, `IntEnum`, `StrEnum`, `Flag`, `IntFlag`"
-                ),
+            other => Err(format!(
+                "unknown pyenum base `{other}`; expected one of `Enum`, `IntEnum`, `StrEnum`, `Flag`, `IntFlag`"
             )),
         }
     }
@@ -269,7 +287,12 @@ fn parse_pyenum_attr(attrs: &[Attribute], enum_ident: &Ident) -> Result<(String,
                     return Err(meta.error("duplicate `base` in #[pyenum(...)]"));
                 }
                 let value: LitStr = meta.value()?.parse()?;
-                base = Some(BaseSelector::from_str(&value)?);
+                base = Some(
+                    value
+                        .value()
+                        .parse::<BaseSelector>()
+                        .map_err(|err| Error::new(value.span(), err))?,
+                );
                 return Ok(());
             }
             if meta.path.is_ident("name") {
