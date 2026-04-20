@@ -72,7 +72,7 @@ jobs:
       - name: create venv & install test deps
         run: |
           uv venv --python ${{ matrix.python }}
-          uv pip install maturin pytest pydantic fastapi sqlalchemy
+          uv pip install maturin pytest
       - name: build & install extension
         run: uv run maturin develop --release
       - name: pytest
@@ -99,7 +99,7 @@ jobs:
       - name: create venv & install test deps
         run: |
           uv venv --python 3.13
-          uv pip install maturin pytest pydantic fastapi sqlalchemy
+          uv pip install maturin pytest
       - name: llvm-cov (Rust + Python)
         run: bash scripts/coverage.sh --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v6
