@@ -51,13 +51,12 @@ plus a mirror class on the Python side.
 
 ## Quick start
 
-Add the crate to your PyO3 extension:
+Add the crate to your PyO3 extension (the [crates.io badge](https://crates.io/crates/pyenum)
+above shows the current version):
 
-```toml
-# Cargo.toml
-[dependencies]
-pyo3   = { version = "0.28", features = ["extension-module", "abi3-py311"] }
-pyenum = "0.0.1"
+```bash
+cargo add pyo3 --features extension-module,abi3-py311
+cargo add pyenum
 ```
 
 `pyenum` pins PyO3 to **0.28** — see [Compatibility](#compatibility) for the
