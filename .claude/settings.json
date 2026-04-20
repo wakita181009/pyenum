@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/post-write.sh",
+            "command": "scripts/post-write.sh",
             "timeout": 120,
             "statusMessage": "format + lint"
           }
