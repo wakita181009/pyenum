@@ -158,11 +158,10 @@ fn add_enum_counted<T: PyEnumTrait>(module: &Bound<'_, PyModule>) -> PyResult<()
 #[pyo3(name = "_construction_count")]
 fn construction_count(cls: &Bound<'_, PyType>) -> PyResult<usize> {
     let py = cls.py();
-    let candidates: [(Bound<'_, PyType>, &AtomicUsize); 7] = [
+    let has_strenum = py.version_info() >= (3, 11);
+    let mut candidates: Vec<(Bound<'_, PyType>, &AtomicUsize)> = vec![
         (Color::py_enum_class(py)?, &COLOR_COUNT),
         (HttpStatus::py_enum_class(py)?, &HTTP_STATUS_COUNT),
-        (Greeting::py_enum_class(py)?, &GREETING_COUNT),
-        (Language::py_enum_class(py)?, &LANGUAGE_COUNT),
         (Permission::py_enum_class(py)?, &PERMISSION_COUNT),
         (BitPerms::py_enum_class(py)?, &BITPERMS_COUNT),
         (
@@ -170,6 +169,10 @@ fn construction_count(cls: &Bound<'_, PyType>) -> PyResult<usize> {
             &UNPICKLABLE_COLOR_COUNT,
         ),
     ];
+    if has_strenum {
+        candidates.push((Greeting::py_enum_class(py)?, &GREETING_COUNT));
+        candidates.push((Language::py_enum_class(py)?, &LANGUAGE_COUNT));
+    }
     for (registered, counter) in &candidates {
         if cls.is(registered) {
             return Ok(counter.load(Ordering::SeqCst));
@@ -182,19 +185,24 @@ fn construction_count(cls: &Bound<'_, PyType>) -> PyResult<usize> {
 
 #[pymodule]
 fn pyenum_test(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = m.py();
+    let has_strenum = py.version_info() >= (3, 11);
+
     add_enum_counted::<Color>(m)?;
     add_enum_counted::<HttpStatus>(m)?;
-    add_enum_counted::<Greeting>(m)?;
-    add_enum_counted::<Language>(m)?;
     add_enum_counted::<Permission>(m)?;
     add_enum_counted::<BitPerms>(m)?;
     add_enum_counted::<UnpicklableColor>(m)?;
     m.add_function(wrap_pyfunction!(color_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(http_roundtrip, m)?)?;
-    m.add_function(wrap_pyfunction!(greeting_roundtrip, m)?)?;
-    m.add_function(wrap_pyfunction!(language_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(permission_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(bitperms_roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(construction_count, m)?)?;
+    if has_strenum {
+        add_enum_counted::<Greeting>(m)?;
+        add_enum_counted::<Language>(m)?;
+        m.add_function(wrap_pyfunction!(greeting_roundtrip, m)?)?;
+        m.add_function(wrap_pyfunction!(language_roundtrip, m)?)?;
+    }
     Ok(())
 }

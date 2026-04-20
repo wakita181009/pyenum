@@ -22,14 +22,8 @@ def test_http_roundtrip_preserves_identity() -> None:
         assert pyenum_test.http_roundtrip(variant) is variant
 
 
-def test_greeting_roundtrip_preserves_identity() -> None:
-    for variant in pyenum_test.Greeting:
-        assert pyenum_test.greeting_roundtrip(variant) is variant
-
-
-def test_language_roundtrip_preserves_identity() -> None:
-    for variant in pyenum_test.Language:
-        assert pyenum_test.language_roundtrip(variant) is variant
+# Greeting / Language (StrEnum) roundtrips live in test_protocol_strenum.py
+# and test_protocol_language.py, where the 3.11+ skip is enforced.
 
 
 def test_permission_roundtrip_preserves_identity() -> None:

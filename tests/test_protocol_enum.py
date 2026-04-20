@@ -17,8 +17,10 @@ def test_is_enum_subclass() -> None:
 
 
 def test_not_int_or_str_subclass() -> None:
+    # `enum.StrEnum` is covered in test_protocol_strenum.py where the skip
+    # for 3.10 is enforced; this file only asserts the IntEnum non-subclass
+    # relation so it stays version-agnostic.
     assert not issubclass(pyenum_test.Color, enum.IntEnum)
-    assert not issubclass(pyenum_test.Color, enum.StrEnum)
 
 
 def test_members_in_declaration_order() -> None:

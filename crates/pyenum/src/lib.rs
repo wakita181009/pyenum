@@ -119,7 +119,9 @@
 //! * **PyO3**: pinned to `0.28`. Cargo's `pyo3-ffi` `links = "python"` rule
 //!   forbids multiple PyO3 lines in the same dependency graph, so no
 //!   multi-version feature matrix is exposed.
-//! * **CPython**: 3.11+ (so `enum.StrEnum` is available without polyfill).
+//! * **CPython**: 3.10+. `enum.StrEnum` requires 3.11+; using
+//!   `#[pyenum(base = "StrEnum")]` on a 3.10 interpreter raises
+//!   `RuntimeError` at first class construction.
 //! * **Out of scope for v1**: projecting Rust `impl` methods onto the
 //!   Python class, module-less standalone export, and free-threaded
 //!   (`--disable-gil`) Python guarantees.

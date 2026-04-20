@@ -18,4 +18,4 @@ path = "src/lib.rs"
 
 [dependencies]
 pyenum = { path = "../pyenum" }
-pyo3 = { workspace = true, features = ["extension-module", "abi3-py311"] }
+pyo3 = { workspace = true, features = ["extension-module", "abi3-py310"] }

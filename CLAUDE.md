@@ -24,7 +24,9 @@ hand-written conversion shims.
 - **Target PyO3 version**: 0.28. Earlier / later PyO3 lines are out of scope
   (attempting to support multiple versions from one crate is blocked by the
   `pyo3-ffi` `links = "python"` native-library-uniqueness rule in cargo).
-- **Target Python**: 3.11+ (so `enum.StrEnum` is available without polyfill).
+- **Target Python**: 3.10+. `enum.StrEnum` requires 3.11+; using
+  `#[pyenum(base = "StrEnum")]` on a 3.10 interpreter raises `RuntimeError`
+  at first class construction. Every other base works on 3.10.
 - **Delivery surface**: a `#[derive(PyEnum)]`-style proc-macro attached to the
   user's Rust enum declaration.
 - **Supported Python bases**: `Enum` (default), `IntEnum`, `StrEnum`, `Flag`,
@@ -88,7 +90,7 @@ pyenum/
 - **Python build**: maturin for PyO3 extension builds.
 - **Formatting / lint**: `cargo fmt`, `cargo clippy`, `cargo check`,
   `ruff format`, `ruff check`, `mypy` all run via `.pre-commit-config.yaml`.
-- **PyO3 dep**: `pyo3 = { version = "0.28", features = ["abi3-py311"] }`
+- **PyO3 dep**: `pyo3 = { version = "0.28", features = ["abi3-py310"] }`
   single-version. The project deliberately does NOT expose a PyO3 version
   feature matrix because cargo's `pyo3-ffi` `links = "python"` rule disallows
   two `pyo3` versions coexisting as optional deps in the same graph.

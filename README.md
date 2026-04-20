@@ -55,7 +55,7 @@ Add the crate to your PyO3 extension (the [crates.io badge](https://crates.io/cr
 above shows the current version):
 
 ```bash
-cargo add pyo3 --features extension-module,abi3-py311
+cargo add pyo3 --features extension-module,abi3-py310
 cargo add pyenum
 ```
 
@@ -169,7 +169,7 @@ label that differs from the variant identifier.
 | Surface       | Supported                                                       |
 | ------------- | --------------------------------------------------------------- |
 | **PyO3**      | 0.28 only                                                       |
-| **Python**    | 3.11, 3.12, 3.13 (CPython; `abi3-py311` limited API)            |
+| **Python**    | 3.10, 3.11, 3.12, 3.13, 3.14 (CPython; `abi3-py310` limited API; `StrEnum` requires 3.11+) |
 | **Rust**      | stable, edition 2024, MSRV 1.94                                 |
 | **Platforms** | Linux (x86_64 / aarch64), macOS (x86_64 / arm64), Windows (x64) |
 
@@ -180,11 +180,15 @@ coexisting in the same dependency graph, so a `pyo3-0_2X` feature matrix
 cannot actually be built. `pyenum` therefore tracks a single PyO3 minor
 line and will bump in lockstep with upstream.
 
-### Why Python 3.11+
+### Python 3.10 and `StrEnum`
 
-`enum.StrEnum` landed in Python 3.11. Polyfilling it on 3.10 means mixing
-`str` into `enum.Enum`, which changes the runtime base class and breaks
-the "pass `isinstance(x, StrEnum)`" guarantee. We chose the strict floor.
+`enum.StrEnum` landed in Python 3.11. On a 3.10 interpreter, using
+`#[pyenum(base = "StrEnum")]` raises `RuntimeError` the first time the
+class is constructed — every other base (`Enum`, `IntEnum`, `Flag`,
+`IntFlag`) works normally. `pyenum` does not polyfill `StrEnum`, because
+mixing `str` into `enum.Enum` changes the runtime base class and breaks
+the `isinstance(x, StrEnum)` guarantee. Keep a 3.11+ floor if you need
+`StrEnum`.
 
 ---
 
@@ -212,8 +216,9 @@ Every case is covered by a `trybuild` snapshot test.
 
 ## Development
 
-Prerequisites: Rust stable (edition 2024, MSRV 1.94), Python 3.11+,
-[`uv`](https://github.com/astral-sh/uv), [`maturin`](https://github.com/PyO3/maturin).
+Prerequisites: Rust stable (edition 2024, MSRV 1.94), Python 3.10+
+(3.11+ if you need `StrEnum`), [`uv`](https://github.com/astral-sh/uv),
+[`maturin`](https://github.com/PyO3/maturin).
 
 ```bash
 # Rust checks

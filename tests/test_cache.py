@@ -10,6 +10,10 @@ from __future__ import annotations
 
 import pyenum_test
 
+# StrEnum-specific cache assertions (Greeting / Language) live in
+# test_protocol_strenum.py and test_protocol_language.py — this file stays
+# version-agnostic and exercises only always-available fixtures.
+
 
 def test_class_identity_stable_across_repeated_access() -> None:
     first = pyenum_test.Color
@@ -41,8 +45,6 @@ def test_construction_count_is_one_per_registered_class() -> None:
     for cls in (
         pyenum_test.Color,
         pyenum_test.HttpStatus,
-        pyenum_test.Greeting,
-        pyenum_test.Language,
         pyenum_test.Permission,
         pyenum_test.BitPerms,
     ):
@@ -64,10 +66,10 @@ def test_construction_count_rejects_foreign_class() -> None:
 
 def test_each_derived_type_gets_its_own_class() -> None:
     # Distinct Rust enums must map to distinct Python classes, even when
-    # they use the same base.
+    # they use the same base. StrEnum distinctness is asserted in
+    # test_protocol_strenum.py / test_protocol_language.py.
     assert pyenum_test.Permission is not pyenum_test.BitPerms
-    assert pyenum_test.Color is not pyenum_test.Greeting
-    assert pyenum_test.Greeting is not pyenum_test.Language
+    assert pyenum_test.Color is not pyenum_test.HttpStatus
 
 
 def test_member_identity_stable_for_each_variant() -> None:

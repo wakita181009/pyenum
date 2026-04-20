@@ -1,10 +1,11 @@
 //! Build a Python enum class via CPython's functional API.
 
 use pyo3::IntoPyObject;
+use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyTuple, PyType};
 
-use crate::trait_def::{PyEnumSpec, VariantLiteral};
+use crate::trait_def::{PyEnumBase, PyEnumSpec, VariantLiteral};
 
 /// Construct the Python enum class described by `spec`.
 ///
@@ -13,6 +14,13 @@ use crate::trait_def::{PyEnumSpec, VariantLiteral};
 /// [`VariantLiteral::Auto`] are passed as `enum.auto()` so CPython applies
 /// its per-base defaulting rules.
 pub fn build_py_enum<'py>(py: Python<'py>, spec: &PyEnumSpec) -> PyResult<Bound<'py, PyType>> {
+    // `enum.StrEnum` only exists on Python 3.11+.
+    if matches!(spec.base, PyEnumBase::StrEnum) && py.version_info() < (3, 11) {
+        return Err(PyRuntimeError::new_err(
+            "pyenum: #[pyenum(base = \"StrEnum\")] requires Python >= 3.11",
+        ));
+    }
+
     let enum_mod = py.import("enum")?;
     let base_cls = enum_mod.getattr(spec.base.class_name())?;
     let auto_fn = enum_mod.getattr("auto")?;

@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "pyenum-test"
 version = "0.0.2"
 description = "cdylib fixture for pyenum's Python integration test suite (not published)."
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "wakita181009" }]
 

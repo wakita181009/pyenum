@@ -25,6 +25,10 @@ import pytest  # type: ignore[import-not-found]
 
 import pyenum_test
 
+# StrEnum pickle coverage (Greeting / Language) lives in
+# test_protocol_strenum.py / test_protocol_language.py so the 3.10 skip
+# stays confined to those two files.
+
 
 @pytest.mark.parametrize(
     "member",
@@ -35,12 +39,6 @@ import pyenum_test
         pyenum_test.HttpStatus.Ok,
         pyenum_test.HttpStatus.NotFound,
         pyenum_test.HttpStatus.Teapot,
-        pyenum_test.Greeting.Hello,
-        pyenum_test.Greeting.World,
-        pyenum_test.Greeting.Bye,
-        pyenum_test.Language.Rust,
-        pyenum_test.Language.Python,
-        pyenum_test.Language.TypeScript,
         pyenum_test.Permission.Read,
         pyenum_test.Permission.Write,
         pyenum_test.Permission.Execute,
@@ -72,8 +70,6 @@ def test_class_module_and_qualname_are_set_for_picklable_classes() -> None:
     for cls in (
         pyenum_test.Color,
         pyenum_test.HttpStatus,
-        pyenum_test.Greeting,
-        pyenum_test.Language,
         pyenum_test.Permission,
         pyenum_test.BitPerms,
     ):
