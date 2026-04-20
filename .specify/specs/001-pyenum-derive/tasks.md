@@ -195,7 +195,7 @@ description: "Task list for pyenum feature 001 — dependency-ordered, TDD Red-G
 
 ### Implementation for User Story 4 (GREEN phase)
 
-- [x] T073 [US4] [GREEN] Add the test-only `construction_counter` helper in `crates/pyenum/src/cache.rs` (behind `#[cfg(test)]` inside the runtime crate; expose `pub(crate)` accessor). Increment inside `get_or_build` only when the closure actually runs (first call)
+- [x] ~~T073 [US4] [GREEN] Add the test-only `construction_counter` helper in `crates/pyenum/src/cache.rs` (behind `#[cfg(test)]` inside the runtime crate; expose `pub(crate)` accessor). Increment inside `get_or_build` only when the closure actually runs (first call)~~ — OBSOLETED: `#[cfg(test)]` + `pub(crate)` is unreachable from integration tests in `crates/pyenum/tests/` (they compile without `cfg(test)`), and no unit test inside `src/cache.rs` exercised it. The single-construction contract is instead observed via the production counter in `crates/pyenum-test` (T074) and asserted from pytest.
 - [x] T074 [US4] [GREEN] Wire the production counter in `crates/pyenum-test/src/lib.rs` using a module-level `AtomicUsize` incremented inside the `PyEnum::py_enum_class` path — exposed via T071
 - [x] ~~T075 [US4] [GREEN] Confirm `compat::OnceCell::get_or_try_init` guarantees serialised single initialisation on every supported `pyo3-0_XX` feature; add feature-gated documentation note in `crates/pyenum/src/compat.rs`~~ — OBSOLETED by Q6; documentation now lives on `pyo3::sync::PyOnceLock` upstream
 - [ ] T076 [US4] [GREEN] Rerun T070–T072 after rebuilding `pyenum_test`; all three must now pass
