@@ -1,13 +1,3 @@
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-.specify/specs/001-pyenum-derive/plan.md
-
-For the project's non-negotiable principles and governance rules, read the
-constitution:
-.specify/memory/constitution.md
-<!-- SPECKIT END -->
-
 # pyenum
 
 A Rust library that lets PyO3 authors expose Rust `enum` types to Python as
@@ -21,9 +11,11 @@ hand-written conversion shims.
 
 ## Scope of v1
 
-- **Target PyO3 version**: 0.28. Earlier / later PyO3 lines are out of scope
-  (attempting to support multiple versions from one crate is blocked by the
-  `pyo3-ffi` `links = "python"` native-library-uniqueness rule in cargo).
+- **Target PyO3 versions**: 0.28 and 0.29, via a single `>=0.28, <0.30` range
+  (default resolves to 0.29). A *feature matrix* selecting between versions is
+  still out of scope — cargo's `pyo3-ffi` `links = "python"`
+  native-library-uniqueness rule forbids two `pyo3` lines coexisting in one
+  graph, so support is a range on one dependency, not two optional deps.
 - **Target Python**: 3.10+. `enum.StrEnum` requires 3.11+; using
   `#[pyenum(base = "StrEnum")]` on a 3.10 interpreter raises `RuntimeError`
   at first class construction. Every other base works on 3.10.
@@ -43,7 +35,7 @@ hand-written conversion shims.
 - Expose Rust enum as a true subclass of the chosen Python base — full enum
   protocol (iteration, name/value lookup, aliasing, hashing, equality, base-
   specific ops such as bitwise for flag types).
-- Generate PyO3 0.28's conversion traits automatically — `IntoPyObject<'py>`
+- Generate PyO3's conversion traits automatically — `IntoPyObject<'py>`
   for both `T` and `&T`, plus `FromPyObject<'a, 'py>` — so the enum can
   appear directly in `#[pyfunction]`, `#[pymethods]`, and `#[pyclass]` field
   signatures without manual extraction or conversion code.
@@ -90,10 +82,11 @@ pyenum/
 - **Python build**: maturin for PyO3 extension builds.
 - **Formatting / lint**: `cargo fmt`, `cargo clippy`, `cargo check`,
   `ruff format`, `ruff check`, `mypy` all run via `.pre-commit-config.yaml`.
-- **PyO3 dep**: `pyo3 = { version = "0.28", features = ["abi3-py310"] }`
-  single-version. The project deliberately does NOT expose a PyO3 version
-  feature matrix because cargo's `pyo3-ffi` `links = "python"` rule disallows
-  two `pyo3` versions coexisting as optional deps in the same graph.
+- **PyO3 dep**: `pyo3 = { version = ">=0.28, <0.30", features = ["abi3-py310"] }`
+  (declared in `[workspace.dependencies]`). One range, not a feature matrix:
+  cargo's `pyo3-ffi` `links = "python"` rule disallows two `pyo3` versions
+  coexisting in the same graph, so the range lets a downstream project's own
+  pyo3 pin decide which line (0.28 or 0.29) `pyenum` links against.
 
 ## Spec Kit workflow
 
@@ -127,10 +120,13 @@ feature.
 
 - The spec is the source of truth. If implementation pressure conflicts with
   the spec, update the spec first, do not drift silently.
-- PyO3 0.28 is the pinned target. Note that 0.28 renamed `GILOnceCell` to
-  `PyOnceLock`, and `FromPyObject` now takes two lifetimes — `FromPyObject<'a,
-  'py>` with `fn extract(obj: Borrowed<'a, 'py, PyAny>)`. When consulting
-  older pyo3 examples, always verify trait shapes against the 0.28 rustdoc.
+- PyO3 0.28 and 0.29 are both supported; the code must compile and pass tests
+  against either. Note that 0.28 renamed `GILOnceCell` to `PyOnceLock`, and
+  `FromPyObject` takes two lifetimes — `FromPyObject<'a, 'py>` with
+  `fn extract(obj: Borrowed<'a, 'py, PyAny>)`; both shapes are unchanged in
+  0.29. When consulting older pyo3 examples, always verify trait shapes against
+  the 0.28/0.29 rustdoc. Verify a change on both: `cargo update -p pyo3
+  --precise 0.28.2` then `cargo test`, and again at `--precise 0.29.0`.
 - Python enum construction uses the functional `Enum("Name", [...])` API via
   PyO3; do not reach into CPython C-level enum internals.
 - Preserve Python aliasing semantics (variants with equal values become

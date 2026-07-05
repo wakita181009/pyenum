@@ -116,9 +116,10 @@
 //!
 //! ## Scope
 //!
-//! * **PyO3**: pinned to `0.28`. Cargo's `pyo3-ffi` `links = "python"` rule
-//!   forbids multiple PyO3 lines in the same dependency graph, so no
-//!   multi-version feature matrix is exposed.
+//! * **PyO3**: `0.28` and `0.29`, via a single `>=0.28, <0.30` range (default
+//!   resolves to `0.29`). Cargo's `pyo3-ffi` `links = "python"` rule forbids
+//!   multiple PyO3 lines in the same dependency graph, so this is a range on
+//!   one dependency line, not a multi-version feature matrix.
 //! * **CPython**: 3.10+. `enum.StrEnum` requires 3.11+; using
 //!   `#[pyenum(base = "StrEnum")]` on a 3.10 interpreter raises
 //!   `RuntimeError` at first class construction.

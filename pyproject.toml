@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pyenum-test"
-version = "0.0.2"
+version = "0.0.5"
 description = "cdylib fixture for pyenum's Python integration test suite (not published)."
 requires-python = ">=3.10"
 license = { text = "MIT" }

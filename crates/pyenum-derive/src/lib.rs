@@ -18,7 +18,7 @@ mod validate;
 /// Derive a [`pyenum::PyEnum`](../pyenum/trait.PyEnumTrait.html)
 /// implementation for a unit-variant Rust enum.
 ///
-/// The derive also emits PyO3 0.28 `IntoPyObject<'py>` (for `T` and `&T`)
+/// The derive also emits PyO3 `IntoPyObject<'py>` (for `T` and `&T`)
 /// and `FromPyObject<'a, 'py>` impls, so the Rust enum can appear directly
 /// in `#[pyfunction]`, `#[pymethods]`, and `#[pyclass]` field signatures.
 ///

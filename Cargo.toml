@@ -15,7 +15,7 @@ homepage = "https://github.com/wakita181009/pyenum"
 authors = ["wakita181009"]
 
 [workspace.dependencies]
-pyo3 = "0.29"
+pyo3 = ">=0.28,<0.30"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full", "extra-traits"] }

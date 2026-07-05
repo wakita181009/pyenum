@@ -59,8 +59,9 @@ cargo add pyo3 --features extension-module,abi3-py310
 cargo add pyenum
 ```
 
-`pyenum` pins PyO3 to **0.28** — see [Compatibility](#compatibility) for the
-rationale.
+`pyenum` supports PyO3 **0.28 and 0.29** (`>=0.28, <0.30`). Cargo picks the
+newest in range by default; a project already on PyO3 0.28 pulls `pyenum` in on
+0.28 automatically — see [Compatibility](#compatibility).
 
 Declare a Rust enum and derive `PyEnum`:
 
@@ -168,17 +169,20 @@ label that differs from the variant identifier.
 
 | Surface       | Supported                                                       |
 | ------------- | --------------------------------------------------------------- |
-| **PyO3**      | 0.28 only                                                       |
+| **PyO3**      | 0.28, 0.29 (`>=0.28, <0.30`; default resolves to 0.29)          |
 | **Python**    | 3.10, 3.11, 3.12, 3.13, 3.14 (CPython; `abi3-py310` limited API; `StrEnum` requires 3.11+) |
 | **Rust**      | stable, edition 2024, MSRV 1.94                                 |
 | **Platforms** | Linux (x86_64 / aarch64), macOS (x86_64 / arm64), Windows (x64) |
 
-### Why PyO3 0.28 only
+### Why a version range, not a feature matrix
 
 Cargo's `pyo3-ffi` `links = "python"` rule forbids two `pyo3` versions
 coexisting in the same dependency graph, so a `pyo3-0_2X` feature matrix
-cannot actually be built. `pyenum` therefore tracks a single PyO3 minor
-line and will bump in lockstep with upstream.
+cannot actually be built — any graph enabling two lines fails to resolve.
+`pyenum` instead depends on `pyo3` through a single semver range
+(`>=0.28, <0.30`). Cargo unifies that to whichever version the rest of your
+graph already uses: 0.29 by default, or 0.28 if you pin it. Exactly one PyO3
+line is ever linked, so the `links` rule is satisfied.
 
 ### Python 3.10 and `StrEnum`
 
