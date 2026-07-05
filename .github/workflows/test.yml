@@ -102,7 +102,7 @@ jobs:
           uv pip install maturin pytest
       - name: llvm-cov (Rust + Python)
         run: bash scripts/coverage.sh --lcov --output-path lcov.info
-      - uses: codecov/codecov-action@v6
+      - uses: codecov/codecov-action@v7
         with:
           files: lcov.info
           fail_ci_if_error: false
