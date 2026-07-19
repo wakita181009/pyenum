@@ -18,5 +18,5 @@ authors = ["wakita181009"]
 pyo3 = ">=0.28,<0.30"
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "2", features = ["full", "extra-traits"] }
+syn = { version = "3", features = ["full", "extra-traits"] }
 trybuild = "1.0"
